@@ -38,7 +38,7 @@ func TestHealthRoutes(t *testing.T) {
 			if test.readiness != nil {
 				readiness = test.readiness
 			}
-			RegisterHealth(router, NewHealth(readiness))
+			NewHealth(readiness).Register(router)
 			recorder := httptest.NewRecorder()
 			router.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/stick"+test.path, nil))
 

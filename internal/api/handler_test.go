@@ -40,7 +40,7 @@ func newTestHandler(t *testing.T) http.Handler {
 		"user-token":  {Sub: "user", Name: "User", Email: "user@example.com", EmailVerified: true},
 	}, []string{"admin@example.com"}, publicURL, true)
 	router := api.NewRouter("")
-	api.Register(router, handler)
+	handler.Register(router)
 	router.SetNotFound(http.HandlerFunc(api.NotFound))
 	return router
 }

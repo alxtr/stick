@@ -52,22 +52,22 @@ func New(
 
 // Register adds all API routes to router. Authentication is applied to the
 // complete API route family; health probes remain unauthenticated.
-func Register(router *Router, handler *Handler) {
-	protected := router.With(handler.authenticate)
-	protected.HandleFunc(http.MethodGet, apiPrefix+"/sticks", handler.listSticks)
-	protected.HandleFunc(http.MethodPost, apiPrefix+"/sticks", handler.createStick)
-	protected.HandleFunc(http.MethodGet, apiPrefix+"/sticks/archived", handler.listArchivedSticks)
-	protected.HandleFunc(http.MethodGet, apiPrefix+"/sticks/{id}", handler.getStick)
-	protected.HandleFunc(http.MethodPatch, apiPrefix+"/sticks/{id}", handler.renameStick)
-	protected.HandleFunc(http.MethodGet, apiPrefix+"/sticks/{id}/history", handler.history)
-	protected.HandleFunc(http.MethodPost, apiPrefix+"/sticks/{id}/claim", handler.claimStick)
-	protected.HandleFunc(http.MethodPost, apiPrefix+"/sticks/{id}/release", handler.releaseStick)
-	protected.HandleFunc(http.MethodPost, apiPrefix+"/sticks/{id}/archive", handler.archiveStick)
-	protected.HandleFunc(http.MethodPost, apiPrefix+"/sticks/{id}/unarchive", handler.unarchiveStick)
-	if handler.notificationsEnabled {
-		protected.HandleFunc(http.MethodPut, apiPrefix+"/sticks/{id}/subscription", handler.subscribe)
-		protected.HandleFunc(http.MethodDelete, apiPrefix+"/sticks/{id}/subscription", handler.unsubscribe)
-		protected.HandleFunc(http.MethodGet, apiPrefix+"/subscriptions", handler.subscriptions)
+func (h *Handler) Register(router *Router) {
+	protected := router.With(h.authenticate)
+	protected.HandleFunc(http.MethodGet, apiPrefix+"/sticks", h.listSticks)
+	protected.HandleFunc(http.MethodPost, apiPrefix+"/sticks", h.createStick)
+	protected.HandleFunc(http.MethodGet, apiPrefix+"/sticks/archived", h.listArchivedSticks)
+	protected.HandleFunc(http.MethodGet, apiPrefix+"/sticks/{id}", h.getStick)
+	protected.HandleFunc(http.MethodPatch, apiPrefix+"/sticks/{id}", h.renameStick)
+	protected.HandleFunc(http.MethodGet, apiPrefix+"/sticks/{id}/history", h.history)
+	protected.HandleFunc(http.MethodPost, apiPrefix+"/sticks/{id}/claim", h.claimStick)
+	protected.HandleFunc(http.MethodPost, apiPrefix+"/sticks/{id}/release", h.releaseStick)
+	protected.HandleFunc(http.MethodPost, apiPrefix+"/sticks/{id}/archive", h.archiveStick)
+	protected.HandleFunc(http.MethodPost, apiPrefix+"/sticks/{id}/unarchive", h.unarchiveStick)
+	if h.notificationsEnabled {
+		protected.HandleFunc(http.MethodPut, apiPrefix+"/sticks/{id}/subscription", h.subscribe)
+		protected.HandleFunc(http.MethodDelete, apiPrefix+"/sticks/{id}/subscription", h.unsubscribe)
+		protected.HandleFunc(http.MethodGet, apiPrefix+"/subscriptions", h.subscriptions)
 	}
 }
 

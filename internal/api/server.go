@@ -57,11 +57,11 @@ func newHandler(service *application.Service, readiness ReadinessChecker, option
 	}
 
 	router := NewRouter(parsedPublicURL.Path)
-	apiHandler := New(service, auth.NewJWTValidator(options.JWT), options.AdminEmails, publicURL, options.NotificationsEnabled)
 	healthHandler := NewHealth(readiness)
+	apiHandler := New(service, auth.NewJWTValidator(options.JWT), options.AdminEmails, publicURL, options.NotificationsEnabled)
 
-	RegisterHealth(router, healthHandler)
-	Register(router, apiHandler)
+	healthHandler.Register(router)
+	apiHandler.Register(router)
 	router.SetNotFound(http.HandlerFunc(NotFound))
 
 	middlewares := Chain(

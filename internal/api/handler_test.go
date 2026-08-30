@@ -15,7 +15,6 @@ import (
 	"stick/internal/application"
 	domain "stick/internal/core"
 	"stick/internal/publicurl"
-	"stick/internal/web/httpx"
 )
 
 type tokenValidator map[string]domain.Identity
@@ -44,7 +43,7 @@ func newTestHandler(t *testing.T) http.Handler {
 		"admin-token": admin,
 		"user-token":  {Sub: "user", Name: "User", Email: "user@example.com", EmailVerified: true},
 	}, []string{"admin@example.com"}, publicURL, true)
-	router := httpx.NewRouter(publicURL)
+	router := api.NewRouter(publicURL)
 	api.Register(router, handler)
 	router.SetNotFound(http.HandlerFunc(api.NotFound))
 	return router

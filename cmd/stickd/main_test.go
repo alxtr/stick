@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"stick/internal/application"
 	"stick/internal/config"
+	"stick/internal/notification"
 )
 
 func TestMainContextStopsOnCanceledParent(t *testing.T) {
@@ -167,7 +167,7 @@ func TestBuildNotifierComposesWebhook(t *testing.T) {
 	if err != nil {
 		t.Fatalf("buildNotifier: %v", err)
 	}
-	if err := notifier.Notify(context.Background(), application.Notification{StickID: "aa001"}); err != nil {
+	if err := notifier.Notify(context.Background(), notification.Notification{StickID: "aa001"}); err != nil {
 		t.Fatalf("Notify: %v", err)
 	}
 	if payload := <-received; !strings.Contains(payload, `"stick_id":"aa001"`) {
@@ -193,7 +193,7 @@ func TestBuildNotifierComposesTeams(t *testing.T) {
 	if err != nil {
 		t.Fatalf("buildNotifier: %v", err)
 	}
-	if err := notifier.Notify(context.Background(), application.Notification{StickName: "aa001"}); err != nil {
+	if err := notifier.Notify(context.Background(), notification.Notification{StickName: "aa001"}); err != nil {
 		t.Fatalf("Notify: %v", err)
 	}
 	if payload := <-received; !strings.Contains(payload, `"@type":"MessageCard"`) || !strings.Contains(payload, `"title":"aa001 is available"`) {
@@ -223,7 +223,7 @@ func TestBuildNotifierComposesMultipleBackends(t *testing.T) {
 	if err != nil {
 		t.Fatalf("buildNotifier: %v", err)
 	}
-	if err := notifier.Notify(context.Background(), application.Notification{}); err != nil {
+	if err := notifier.Notify(context.Background(), notification.Notification{}); err != nil {
 		t.Fatalf("Notify: %v", err)
 	}
 	select {
@@ -257,7 +257,7 @@ func TestBuildNotifierComposesMultipleInstancesOfOneBackend(t *testing.T) {
 	if err != nil {
 		t.Fatalf("buildNotifier: %v", err)
 	}
-	if err := notifier.Notify(context.Background(), application.Notification{}); err != nil {
+	if err := notifier.Notify(context.Background(), notification.Notification{}); err != nil {
 		t.Fatalf("Notify: %v", err)
 	}
 	for i := 0; i < 2; i++ {
@@ -305,7 +305,7 @@ func TestBuildNotifierAttributesRuntimeErrors(t *testing.T) {
 	if err != nil {
 		t.Fatalf("buildNotifier: %v", err)
 	}
-	err = notifier.Notify(context.Background(), application.Notification{})
+	err = notifier.Notify(context.Background(), notification.Notification{})
 	if err == nil || !strings.Contains(err.Error(), "webhook: webhook returned 502") {
 		t.Fatalf("runtime error = %v", err)
 	}

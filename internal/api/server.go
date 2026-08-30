@@ -1,5 +1,4 @@
-// Package web owns the HTTP server lifecycle.
-package web
+package api
 
 import (
 	"context"
@@ -10,12 +9,9 @@ import (
 	"net/http"
 	"time"
 
-	"stick/internal/api"
 	"stick/internal/application"
 	"stick/internal/auth"
 	"stick/internal/publicurl"
-	"stick/internal/web/health"
-	"stick/internal/web/httpx"
 )
 
 // Options contains the settings required to build the HTTP server.
@@ -37,7 +33,7 @@ type Runner struct {
 // NewRunner builds the HTTP application and its dependency graph.
 // Listening is intentionally deferred to Run so startup failures are reported
 // through the runner lifecycle rather than escaping during HTTP composition.
-func NewRunner(service *application.Service, readiness health.ReadinessChecker, options Options) (*Runner, error) {
+func NewRunner(service *application.Service, readiness ReadinessChecker, options Options) (*Runner, error) {
 	handler, err := newHandler(service, readiness, options)
 	if err != nil {
 		return nil, fmt.Errorf("HTTP server: %w", err)
@@ -49,20 +45,20 @@ func NewRunner(service *application.Service, readiness health.ReadinessChecker, 
 }
 
 // newHandler builds the complete HTTP graph.
-func newHandler(service *application.Service, readiness health.ReadinessChecker, options Options) (http.Handler, error) {
+func newHandler(service *application.Service, readiness ReadinessChecker, options Options) (http.Handler, error) {
 	if err := options.PublicURL.Validate(); err != nil {
 		return nil, fmt.Errorf("public URL: %w", err)
 	}
 
-	router := httpx.NewRouter(options.PublicURL)
-	health.Register(router, health.New(readiness))
-	apiHandler := api.New(service, auth.NewJWTValidator(options.JWT), options.AdminEmails, options.PublicURL, options.NotificationsEnabled)
-	api.Register(router, apiHandler)
-	router.SetNotFound(http.HandlerFunc(api.NotFound))
+	router := NewRouter(options.PublicURL)
+	RegisterHealth(router, NewHealth(readiness))
+	apiHandler := New(service, auth.NewJWTValidator(options.JWT), options.AdminEmails, options.PublicURL, options.NotificationsEnabled)
+	Register(router, apiHandler)
+	router.SetNotFound(http.HandlerFunc(NotFound))
 
-	middlewares := httpx.Chain(
-		httpx.RequestLogger,
-		api.Headers)
+	middlewares := Chain(
+		RequestLogger,
+		Headers)
 	return middlewares(router), nil
 }
 

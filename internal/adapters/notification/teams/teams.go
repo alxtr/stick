@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
-	"stick/internal/application"
 	"stick/internal/netutil"
+	"stick/internal/notification"
 )
 
 const defaultTimeout = 10 * time.Second
@@ -67,7 +67,7 @@ type Notifier struct {
 	client *http.Client
 }
 
-var _ application.Notifier = (*Notifier)(nil)
+var _ notification.Notifier = (*Notifier)(nil)
 
 // New creates a Microsoft Teams webhook notifier.
 func New(cfg Config) (*Notifier, error) {
@@ -85,7 +85,7 @@ func New(cfg Config) (*Notifier, error) {
 }
 
 // Notify sends one release notification to Microsoft Teams.
-func (n *Notifier) Notify(ctx context.Context, notification application.Notification) error {
+func (n *Notifier) Notify(ctx context.Context, notification notification.Notification) error {
 	card := Payload{
 		Type:       "MessageCard",
 		Context:    "http://schema.org/extensions",

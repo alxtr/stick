@@ -1,10 +1,8 @@
-package format_test
+package outbox
 
 import (
 	"testing"
 	"time"
-
-	"stick/internal/format"
 )
 
 func TestDuration(t *testing.T) {
@@ -19,7 +17,7 @@ func TestDuration(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			if got := format.Duration(test.value); got != test.want {
+			if got := formatDuration(test.value); got != test.want {
 				t.Fatalf("Duration(%v) = %q, want %q", test.value, got, test.want)
 			}
 		})

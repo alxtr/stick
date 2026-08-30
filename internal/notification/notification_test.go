@@ -1,4 +1,4 @@
-package application_test
+package notification_test
 
 import (
 	"context"
@@ -6,23 +6,23 @@ import (
 	"strings"
 	"testing"
 
-	app "stick/internal/application"
+	notification "stick/internal/notification"
 )
 
 func TestNoopNotifier(t *testing.T) {
-	notifier := app.Noop()
-	if err := notifier.Notify(context.Background(), app.Notification{}); err != nil {
+	notifier := notification.Noop()
+	if err := notifier.Notify(context.Background(), notification.Notification{}); err != nil {
 		t.Errorf("Noop should never error, got %v", err)
 	}
 }
 
 func TestNamedNotifierAttributesErrorAndPreservesCause(t *testing.T) {
 	failure := errors.New("connection refused")
-	notifier := app.Named("smtp", app.NotifierFunc(func(context.Context, app.Notification) error {
+	notifier := notification.Named("smtp", notification.NotifierFunc(func(context.Context, notification.Notification) error {
 		return failure
 	}))
 
-	err := notifier.Notify(context.Background(), app.Notification{})
+	err := notifier.Notify(context.Background(), notification.Notification{})
 	if !errors.Is(err, failure) {
 		t.Fatalf("Named should preserve the cause, got %v", err)
 	}
@@ -35,18 +35,18 @@ func TestFanoutNotifierAttemptsEveryBackendAndJoinsErrors(t *testing.T) {
 	firstFailure := errors.New("first failure")
 	secondFailure := errors.New("second failure")
 	var calls []string
-	notifier := app.Fanout(
-		app.Named("first", app.NotifierFunc(func(context.Context, app.Notification) error {
+	notifier := notification.Fanout(
+		notification.Named("first", notification.NotifierFunc(func(context.Context, notification.Notification) error {
 			calls = append(calls, "first")
 			return firstFailure
 		})),
-		app.Named("second", app.NotifierFunc(func(context.Context, app.Notification) error {
+		notification.Named("second", notification.NotifierFunc(func(context.Context, notification.Notification) error {
 			calls = append(calls, "second")
 			return secondFailure
 		})),
 	)
 
-	err := notifier.Notify(context.Background(), app.Notification{})
+	err := notifier.Notify(context.Background(), notification.Notification{})
 	if !errors.Is(err, firstFailure) || !errors.Is(err, secondFailure) {
 		t.Fatalf("Fanout error = %v, want both causes", err)
 	}

@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"stick/internal/adapters/notification/teams"
-	notify "stick/internal/application"
+	notify "stick/internal/notification"
 )
 
 func TestTeamsNotifierPostsMessageCard(t *testing.T) {

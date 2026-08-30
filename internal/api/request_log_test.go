@@ -1,4 +1,4 @@
-package httpx_test
+package api_test
 
 import (
 	"bytes"
@@ -11,12 +11,12 @@ import (
 	"strings"
 	"testing"
 
-	"stick/internal/web/httpx"
+	"stick/internal/api"
 )
 
 func TestRequestIDContext(t *testing.T) {
-	ctx := httpx.WithRequestID(context.Background(), "request-42")
-	if got := httpx.RequestID(ctx); got != "request-42" {
+	ctx := api.WithRequestID(context.Background(), "request-42")
+	if got := api.RequestID(ctx); got != "request-42" {
 		t.Errorf("request ID = %q, want request-42", got)
 	}
 }
@@ -26,8 +26,8 @@ func TestRequestLoggerAssignsAndPropagatesID(t *testing.T) {
 	previous := slog.Default()
 	slog.SetDefault(slog.New(slog.NewJSONHandler(&logs, nil)))
 	t.Cleanup(func() { slog.SetDefault(previous) })
-	wrapped := httpx.RequestLogger(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if httpx.RequestID(r.Context()) == "" {
+	wrapped := api.RequestLogger(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if api.RequestID(r.Context()) == "" {
 			t.Error("request ID missing from context")
 		}
 		w.WriteHeader(http.StatusTeapot)
@@ -52,7 +52,7 @@ func TestRequestLoggerAssignsAndPropagatesID(t *testing.T) {
 }
 
 func TestRequestLoggerPropagatesValidIncomingID(t *testing.T) {
-	wrapped := httpx.RequestLogger(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	wrapped := api.RequestLogger(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 	}))
 	request := httptest.NewRequest(http.MethodGet, "/", nil)
@@ -69,9 +69,9 @@ func TestLogErrorLogsCorrelatedFailure(t *testing.T) {
 	previous := slog.Default()
 	slog.SetDefault(slog.New(slog.NewJSONHandler(&logs, nil)))
 	t.Cleanup(func() { slog.SetDefault(previous) })
-	ctx := httpx.WithRequestID(t.Context(), "request-42")
+	ctx := api.WithRequestID(t.Context(), "request-42")
 
-	httpx.LogError(ctx, "request failed", "perform operation", errors.New("failed"))
+	api.LogError(ctx, "request failed", "perform operation", errors.New("failed"))
 
 	for _, want := range []string{`"msg":"request failed"`, `"request_id":"request-42"`, `"operation":"perform operation"`, `"error":"failed"`} {
 		if !strings.Contains(logs.String(), want) {

@@ -1,4 +1,4 @@
-package health
+package api
 
 import (
 	"context"
@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"stick/internal/publicurl"
-	"stick/internal/web/httpx"
 )
 
 type healthDB struct {
@@ -40,12 +39,12 @@ func TestHealthRoutes(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			router := httpx.NewRouter(publicURL)
+			router := NewRouter(publicURL)
 			var readiness ReadinessChecker
 			if test.readiness != nil {
 				readiness = test.readiness
 			}
-			Register(router, New(readiness))
+			RegisterHealth(router, NewHealth(readiness))
 			recorder := httptest.NewRecorder()
 			router.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/stick"+test.path, nil))
 

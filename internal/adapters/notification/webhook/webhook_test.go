@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"stick/internal/adapters/notification/webhook"
-	notify "stick/internal/application"
+	notify "stick/internal/notification"
 )
 
 func TestWebhookNotifier_PostsJSON(t *testing.T) {

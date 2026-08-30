@@ -1,4 +1,4 @@
-package httpx
+package api
 
 import (
 	"net/http"

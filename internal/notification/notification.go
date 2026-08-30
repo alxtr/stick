@@ -1,4 +1,5 @@
-package application
+// Package notification defines transport-neutral notification delivery contracts.
+package notification
 
 import (
 	"context"

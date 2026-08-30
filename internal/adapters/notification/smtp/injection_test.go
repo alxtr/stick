@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	notify "stick/internal/application"
+	notify "stick/internal/notification"
 )
 
 func TestSMTPNotifierInjectedSenderRendersMessage(t *testing.T) {

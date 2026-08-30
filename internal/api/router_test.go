@@ -1,12 +1,12 @@
-package httpx_test
+package api_test
 
 import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"stick/internal/api"
 	"stick/internal/publicurl"
-	"stick/internal/web/httpx"
 )
 
 func testPublicURL(t *testing.T, mountPath string) publicurl.URL {
@@ -20,13 +20,13 @@ func testPublicURL(t *testing.T, mountPath string) publicurl.URL {
 
 func TestRouterWithScopesMiddleware(t *testing.T) {
 	publicURL := testPublicURL(t, "")
-	routes := httpx.NewRouter(publicURL)
+	routes := api.NewRouter(publicURL)
 	reject := func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(response http.ResponseWriter, _ *http.Request) {
 			response.WriteHeader(http.StatusUnauthorized)
 		})
 	}
-	protected := routes.With(httpx.Chain(reject))
+	protected := routes.With(api.Chain(reject))
 	routes.Handle(http.MethodGet, "/public", http.HandlerFunc(func(response http.ResponseWriter, _ *http.Request) {
 		response.WriteHeader(http.StatusNoContent)
 	}))
@@ -49,7 +49,7 @@ func TestRouterWithScopesMiddleware(t *testing.T) {
 
 func TestRouterPreservesNestedMountAndPathValues(t *testing.T) {
 	publicURL := testPublicURL(t, "/ops/stick")
-	routes := httpx.NewRouter(publicURL)
+	routes := api.NewRouter(publicURL)
 	routes.HandleFunc(http.MethodGet, "/sticks/{id}", func(w http.ResponseWriter, r *http.Request) {
 		if got := r.URL.Path; got != "/ops/stick/sticks/aa001" {
 			t.Errorf("handler path = %q", got)
@@ -72,7 +72,7 @@ func TestRouterPreservesNestedMountAndPathValues(t *testing.T) {
 }
 
 func TestRouterUsesCustomNotFoundOnlyInsideMount(t *testing.T) {
-	routes := httpx.NewRouter(testPublicURL(t, "/stick"))
+	routes := api.NewRouter(testPublicURL(t, "/stick"))
 	routes.SetNotFound(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
 		w.WriteHeader(http.StatusNotFound)
@@ -93,7 +93,7 @@ func TestRouterUsesCustomNotFoundOnlyInsideMount(t *testing.T) {
 }
 
 func TestRouterCustomNotFoundAndRedirectSemantics(t *testing.T) {
-	routes := httpx.NewRouter(testPublicURL(t, "/stick"))
+	routes := api.NewRouter(testPublicURL(t, "/stick"))
 	routes.SetNotFound(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
 		w.WriteHeader(http.StatusNotFound)

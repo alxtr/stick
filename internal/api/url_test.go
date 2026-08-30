@@ -1,10 +1,10 @@
-package httpx_test
+package api_test
 
 import (
 	"testing"
 
+	"stick/internal/api"
 	"stick/internal/publicurl"
-	"stick/internal/web/httpx"
 )
 
 func TestPathComposition(t *testing.T) {
@@ -20,10 +20,10 @@ func TestPathComposition(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			publicURL := mustParse(t, "https://example.test", tt.basePath)
-			if got := httpx.Path(publicURL, tt.reference); got != tt.want {
+			if got := api.Path(publicURL, tt.reference); got != tt.want {
 				t.Errorf("Path() = %q, want %q", got, tt.want)
 			}
-			if got := httpx.Absolute(publicURL, tt.reference); got != publicURL.String()+tt.reference {
+			if got := api.Absolute(publicURL, tt.reference); got != publicURL.String()+tt.reference {
 				t.Errorf("Absolute() = %q", got)
 			}
 		})
@@ -39,7 +39,7 @@ func TestPathRejectsUntrustedReferences(t *testing.T) {
 					t.Fatalf("Path(%q) did not panic", reference)
 				}
 			}()
-			_ = httpx.Path(publicURL, reference)
+			_ = api.Path(publicURL, reference)
 		})
 	}
 }

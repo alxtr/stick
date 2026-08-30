@@ -1,6 +1,4 @@
-// Package httpx provides the small net/http toolkit shared by the service's
-// endpoints and middleware.
-package httpx
+package api
 
 import "net/http"
 

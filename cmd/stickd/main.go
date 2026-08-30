@@ -20,11 +20,12 @@ import (
 	"stick/internal/adapters/persistence/mongodb"
 	"stick/internal/adapters/persistence/postgres"
 	"stick/internal/adapters/persistence/sqlite"
+	"stick/internal/api"
 	"stick/internal/application"
 	"stick/internal/auth"
 	"stick/internal/config"
+	"stick/internal/notification"
 	"stick/internal/outbox"
-	"stick/internal/web"
 )
 
 const version = "1.0.0"
@@ -88,7 +89,7 @@ func mainContext(parent context.Context, args []string) (err error) {
 	}()
 	service := application.NewService(store)
 
-	serverRunner, err := web.NewRunner(service, store, web.Options{
+	serverRunner, err := api.NewRunner(service, store, api.Options{
 		PublicURL:            cfg.Server.PublicURL,
 		ListenAddr:           cfg.Server.ListenAddr,
 		JWT:                  auth.JWTConfig{Endpoint: cfg.Auth.IDPEndpoint, Audience: cfg.Auth.Audience, Scope: cfg.Auth.Scope},
@@ -171,8 +172,8 @@ func openStore(ctx context.Context, cfg config.DatabaseConfig) (backend, error) 
 	}
 }
 
-func buildNotifier(cfg config.NotificationsConfig) (application.Notifier, error) {
-	var notifiers []application.Notifier
+func buildNotifier(cfg config.NotificationsConfig) (notification.Notifier, error) {
+	var notifiers []notification.Notifier
 	for i, smtpConfig := range cfg.SMTP {
 		notifier, err := smtp.New(smtp.Config{
 			Host:     smtpConfig.Host,
@@ -188,23 +189,23 @@ func buildNotifier(cfg config.NotificationsConfig) (application.Notifier, error)
 		if err != nil {
 			return nil, fmt.Errorf("%s notifier: %w", notificationBackendName("smtp", i), err)
 		}
-		notifiers = append(notifiers, application.Named(notificationBackendName("smtp", i), notifier))
+		notifiers = append(notifiers, notification.Named(notificationBackendName("smtp", i), notifier))
 	}
 	for i, webhookConfig := range cfg.Webhook {
 		notifier, err := webhook.New(webhook.Config{URL: webhookConfig.URL})
 		if err != nil {
 			return nil, fmt.Errorf("%s notifier: %w", notificationBackendName("webhook", i), err)
 		}
-		notifiers = append(notifiers, application.Named(notificationBackendName("webhook", i), notifier))
+		notifiers = append(notifiers, notification.Named(notificationBackendName("webhook", i), notifier))
 	}
 	for i, teamsConfig := range cfg.Teams {
 		notifier, err := teams.New(teams.Config{URL: teamsConfig.URL})
 		if err != nil {
 			return nil, fmt.Errorf("%s notifier: %w", notificationBackendName("teams", i), err)
 		}
-		notifiers = append(notifiers, application.Named(notificationBackendName("teams", i), notifier))
+		notifiers = append(notifiers, notification.Named(notificationBackendName("teams", i), notifier))
 	}
-	return application.Multi(notifiers...), nil
+	return notification.Multi(notifiers...), nil
 }
 
 func notificationBackendName(kind string, index int) string {

@@ -13,7 +13,7 @@ import (
 	"text/template"
 	"time"
 
-	"stick/internal/application"
+	"stick/internal/notification"
 )
 
 const defaultTimeout = 10 * time.Second
@@ -63,7 +63,7 @@ type Notifier struct {
 	send        sendContextFunc
 }
 
-var _ application.Notifier = (*Notifier)(nil)
+var _ notification.Notifier = (*Notifier)(nil)
 
 // New creates an SMTP notifier, parsing the subject and body as Go text/templates.
 func New(cfg Config, templates Templates) (*Notifier, error) {
@@ -101,7 +101,7 @@ func newNotifier(cfg Config, templates Templates, send sendContextFunc) (*Notifi
 }
 
 // Notify sends one notification through SMTP.
-func (n *Notifier) Notify(ctx context.Context, notification application.Notification) error {
+func (n *Notifier) Notify(ctx context.Context, notification notification.Notification) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}

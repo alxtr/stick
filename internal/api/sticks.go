@@ -60,7 +60,7 @@ func (h *Handler) createStick(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	setETag(w, stick.Version)
-	w.Header().Set("Location", Absolute(h.publicURL, apiPrefix+"/sticks/"+stick.ID))
+	w.Header().Set("Location", h.publicURL+apiPrefix+"/sticks/"+stick.ID)
 	writeJSON(w, http.StatusCreated, stickToJSON(stick))
 }
 

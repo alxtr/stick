@@ -14,7 +14,6 @@ import (
 	"stick/internal/api"
 	"stick/internal/application"
 	domain "stick/internal/core"
-	"stick/internal/publicurl"
 )
 
 type tokenValidator map[string]domain.Identity
@@ -34,16 +33,13 @@ func newTestHandler(t *testing.T) http.Handler {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = store.Close() })
-	publicURL, err := publicurl.Parse("http://localhost:8080")
-	if err != nil {
-		t.Fatal(err)
-	}
+	publicURL := "http://localhost:8080"
 	admin := domain.Identity{Sub: "admin", Name: "Admin", Email: "admin@example.com", EmailVerified: true}
 	handler := api.New(application.NewService(store), tokenValidator{
 		"admin-token": admin,
 		"user-token":  {Sub: "user", Name: "User", Email: "user@example.com", EmailVerified: true},
 	}, []string{"admin@example.com"}, publicURL, true)
-	router := api.NewRouter(publicURL)
+	router := api.NewRouter("")
 	api.Register(router, handler)
 	router.SetNotFound(http.HandlerFunc(api.NotFound))
 	return router
@@ -91,6 +87,9 @@ func TestStickETagAndOptimisticConcurrency(t *testing.T) {
 	}
 	if stick.ID == "" || stick.Version != 1 {
 		t.Fatalf("created stick = %+v", stick)
+	}
+	if got := created.Header().Get("Location"); got != "http://localhost:8080/api/v1/sticks/"+stick.ID {
+		t.Errorf("Location = %q", got)
 	}
 
 	path := "/api/v1/sticks/" + stick.ID

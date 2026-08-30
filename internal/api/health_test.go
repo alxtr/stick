@@ -7,8 +7,6 @@ import (
 	"net/http/httptest"
 	"testing"
 	"time"
-
-	"stick/internal/publicurl"
 )
 
 type healthDB struct {
@@ -35,11 +33,7 @@ func TestHealthRoutes(t *testing.T) {
 		{name: "missing dependency", path: "/readyz", wantStatus: http.StatusServiceUnavailable, wantBody: "not ready\n"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			publicURL, err := publicurl.Parse("http://example.test/stick")
-			if err != nil {
-				t.Fatal(err)
-			}
-			router := NewRouter(publicURL)
+			router := NewRouter("/stick")
 			var readiness ReadinessChecker
 			if test.readiness != nil {
 				readiness = test.readiness

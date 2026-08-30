@@ -16,9 +16,45 @@ func normalize(config Config) (Config, error) {
 	if config.Server.ListenAddr == "" {
 		config.Server.ListenAddr = ":8080"
 	}
+<<<<<<< HEAD
 	if err := config.Server.PublicURL.Validate(); err != nil {
 		if err := setPublicURL(&config, "http://localhost"); err != nil {
 			return Config{}, err
+=======
+	database, err := normalizeDatabase(raw.Database)
+	if err != nil {
+		return Config{}, err
+	}
+	publicURLValue := strings.TrimSpace(raw.Server.PublicURL)
+	if publicURLValue == "" {
+		publicURLValue = "http://localhost"
+	}
+	publicURL, err := publicurl.Parse(publicURLValue)
+	if err != nil {
+		return Config{}, err
+	}
+	parsedPublicURL, err := url.Parse(publicURL)
+	if err != nil {
+		// publicurl.Parse already parsed and validated this value. Keep this
+		// guard local to the configuration boundary if that implementation
+		// changes in the future.
+		return Config{}, fmt.Errorf("invalid PUBLIC_URL %q: %w", publicURLValue, err)
+	}
+	if parsedPublicURL.Scheme != "https" && !netutil.IsLoopbackHost(parsedPublicURL.Hostname()) {
+		return Config{}, fmt.Errorf("invalid PUBLIC_URL %q: HTTPS is required for non-local addresses", publicURLValue)
+	}
+
+	listenAddr := strings.TrimSpace(raw.Server.ListenAddr)
+	if listenAddr == "" {
+		listenAddr = ":8080"
+	}
+
+	location := time.UTC
+	if raw.Timezone != "" {
+		location, err = time.LoadLocation(raw.Timezone)
+		if err != nil {
+			return Config{}, fmt.Errorf("invalid timezone %q: %w", raw.Timezone, err)
+>>>>>>> 39d6435 (Trying to factor out publicurl)
 		}
 	}
 	if config.Timezone == nil {

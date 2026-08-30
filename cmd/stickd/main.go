@@ -103,7 +103,7 @@ func mainContext(parent context.Context, args []string) (err error) {
 	components := []application.Component{serverRunner}
 	if notifier != nil {
 		components = append(components, outbox.NewWorker(store, notifier, outbox.WorkerOptions{
-			BaseURL:  cfg.Server.PublicURL.String(),
+			BaseURL:  cfg.Server.PublicURL,
 			Location: cfg.Timezone,
 		}))
 	}

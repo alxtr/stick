@@ -1,24 +1,25 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 	"slices"
 	"strings"
-
-	"stick/internal/publicurl"
 )
 
 // Router registers mount-aware net/http routes with optional scoped middleware.
 type Router struct {
 	mux         *http.ServeMux
-	publicURL   publicurl.URL
+	mountPath   string
 	middlewares []Middleware
 	notFound    http.Handler
 }
 
-// NewRouter returns a mount-aware router for publicURL.
-func NewRouter(publicURL publicurl.URL) *Router {
-	return &Router{mux: http.NewServeMux(), publicURL: publicURL}
+// NewRouter returns a mount-aware router. mountPath is the optional path from
+// an already parsed and validated public URL; the router has no reason to know
+// the URL's origin.
+func NewRouter(mountPath string) *Router {
+	return &Router{mux: http.NewServeMux(), mountPath: mountPath}
 }
 
 func (r *Router) ServeHTTP(response http.ResponseWriter, request *http.Request) {
@@ -50,7 +51,7 @@ func (r *Router) With(stack ...Middleware) *Router {
 // Handle registers a route with the router and optional middleware.
 func (r *Router) Handle(method, reference string, handler http.Handler, middlewares ...Middleware) {
 	combined := append(slices.Clone(r.middlewares), middlewares...)
-	r.mux.Handle(method+" "+Path(r.publicURL, reference), Chain(combined...)(handler))
+	r.mux.Handle(method+" "+r.path(reference), Chain(combined...)(handler))
 }
 
 // HandleFunc registers a route backed by an http.HandlerFunc.
@@ -59,6 +60,13 @@ func (r *Router) HandleFunc(method, reference string, handler http.HandlerFunc, 
 }
 
 func (r *Router) containsRequestPath(path string) bool {
-	mount := r.publicURL.MountPath()
+	mount := r.mountPath
 	return mount == "" || path == mount || strings.HasPrefix(path, mount+"/")
+}
+
+func (r *Router) path(reference string) string {
+	if reference == "" || reference[0] != '/' || strings.HasPrefix(reference, "//") || strings.ContainsAny(reference, `\#`) {
+		panic(fmt.Sprintf("invalid application-relative reference %q", reference))
+	}
+	return r.mountPath + reference
 }

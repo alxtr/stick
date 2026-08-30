@@ -6,21 +6,15 @@ import (
 	"testing"
 
 	"stick/internal/api"
-	"stick/internal/publicurl"
 )
 
-func testPublicURL(t *testing.T, mountPath string) publicurl.URL {
+func testMountPath(t *testing.T, mountPath string) string {
 	t.Helper()
-	publicURL, err := publicurl.Parse("http://example.test" + mountPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return publicURL
+	return mountPath
 }
 
 func TestRouterWithScopesMiddleware(t *testing.T) {
-	publicURL := testPublicURL(t, "")
-	routes := api.NewRouter(publicURL)
+	routes := api.NewRouter(testMountPath(t, ""))
 	reject := func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(response http.ResponseWriter, _ *http.Request) {
 			response.WriteHeader(http.StatusUnauthorized)
@@ -48,8 +42,7 @@ func TestRouterWithScopesMiddleware(t *testing.T) {
 }
 
 func TestRouterPreservesNestedMountAndPathValues(t *testing.T) {
-	publicURL := testPublicURL(t, "/ops/stick")
-	routes := api.NewRouter(publicURL)
+	routes := api.NewRouter(testMountPath(t, "/ops/stick"))
 	routes.HandleFunc(http.MethodGet, "/sticks/{id}", func(w http.ResponseWriter, r *http.Request) {
 		if got := r.URL.Path; got != "/ops/stick/sticks/aa001" {
 			t.Errorf("handler path = %q", got)
@@ -72,7 +65,7 @@ func TestRouterPreservesNestedMountAndPathValues(t *testing.T) {
 }
 
 func TestRouterUsesCustomNotFoundOnlyInsideMount(t *testing.T) {
-	routes := api.NewRouter(testPublicURL(t, "/stick"))
+	routes := api.NewRouter(testMountPath(t, "/stick"))
 	routes.SetNotFound(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
 		w.WriteHeader(http.StatusNotFound)
@@ -93,7 +86,7 @@ func TestRouterUsesCustomNotFoundOnlyInsideMount(t *testing.T) {
 }
 
 func TestRouterCustomNotFoundAndRedirectSemantics(t *testing.T) {
-	routes := api.NewRouter(testPublicURL(t, "/stick"))
+	routes := api.NewRouter(testMountPath(t, "/stick"))
 	routes.SetNotFound(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
 		w.WriteHeader(http.StatusNotFound)
@@ -138,6 +131,20 @@ func TestRouterCustomNotFoundAndRedirectSemantics(t *testing.T) {
 			if got := recorder.Body.String() == "local not found"; got != test.custom404 {
 				t.Errorf("custom 404 body present = %t, want %t; body=%q", got, test.custom404, recorder.Body.String())
 			}
+		})
+	}
+}
+
+func TestRouterRejectsUntrustedReferences(t *testing.T) {
+	routes := api.NewRouter("/stick")
+	for _, reference := range []string{"", "api/v1/sticks", "//evil.example", `/stick\\one`, "/stick#fragment"} {
+		t.Run(reference, func(t *testing.T) {
+			defer func() {
+				if recover() == nil {
+					t.Fatalf("Handle(%q) did not panic", reference)
+				}
+			}()
+			routes.Handle(http.MethodGet, reference, http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
 		})
 	}
 }

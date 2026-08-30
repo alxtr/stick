@@ -9,7 +9,6 @@ import (
 	"stick/internal/application"
 	"stick/internal/auth"
 	domain "stick/internal/core"
-	"stick/internal/publicurl"
 )
 
 const (
@@ -25,7 +24,7 @@ type Handler struct {
 	service              *application.Service
 	validator            TokenValidator
 	admins               map[string]struct{}
-	publicURL            publicurl.URL
+	publicURL            string
 	notificationsEnabled bool
 }
 
@@ -39,7 +38,7 @@ func New(
 	service *application.Service,
 	validator TokenValidator,
 	adminEmails []string,
-	publicURL publicurl.URL,
+	publicURL string,
 	notificationsEnabled bool,
 ) *Handler {
 	return &Handler{

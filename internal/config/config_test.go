@@ -82,7 +82,7 @@ func TestLoadDefaultsPublicURL(t *testing.T) {
 	setRequiredEnv(t)
 	t.Setenv("STICK_SERVER_PUBLIC_URL", "")
 	cfg := loadFromEnv(t)
-	if got := cfg.Server.PublicURL.String(); got != "http://localhost" {
+	if got := cfg.Server.PublicURL; got != "http://localhost" {
 		t.Fatalf("PublicURL = %q, want http://localhost", got)
 	}
 }
@@ -114,7 +114,7 @@ timezone: America/New_York
 	if cfg.Auth.Audience != "env-api" || cfg.Auth.IDPEndpoint != "https://yaml.example.com" || cfg.Auth.Scope != "stick:read" {
 		t.Fatalf("auth = %+v", cfg.Auth)
 	}
-	if got := cfg.Server.PublicURL.String(); got != "https://env.example.com/stick" {
+	if got := cfg.Server.PublicURL; got != "https://env.example.com/stick" {
 		t.Errorf("PublicURL = %q", got)
 	}
 	want, _ := time.LoadLocation("America/New_York")

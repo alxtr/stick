@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"net/url"
 	"time"
 
 	"stick/internal/application"
@@ -16,7 +17,7 @@ import (
 
 // Options contains the settings required to build the HTTP server.
 type Options struct {
-	PublicURL            publicurl.URL
+	PublicURL            string
 	ListenAddr           string
 	JWT                  auth.JWTConfig
 	AdminEmails          []string
@@ -46,13 +47,19 @@ func NewRunner(service *application.Service, readiness ReadinessChecker, options
 
 // newHandler builds the complete HTTP graph.
 func newHandler(service *application.Service, readiness ReadinessChecker, options Options) (http.Handler, error) {
-	if err := options.PublicURL.Validate(); err != nil {
+	publicURL, err := publicurl.Parse(options.PublicURL)
+	if err != nil {
+		return nil, fmt.Errorf("public URL: %w", err)
+	}
+	parsedPublicURL, err := url.Parse(publicURL)
+	if err != nil {
 		return nil, fmt.Errorf("public URL: %w", err)
 	}
 
-	router := NewRouter(options.PublicURL)
+	router := NewRouter(parsedPublicURL.Path)
+	apiHandler := New(service, auth.NewJWTValidator(options.JWT), options.AdminEmails, publicURL, options.NotificationsEnabled)
+
 	RegisterHealth(router, NewHealth(readiness))
-	apiHandler := New(service, auth.NewJWTValidator(options.JWT), options.AdminEmails, options.PublicURL, options.NotificationsEnabled)
 	Register(router, apiHandler)
 	router.SetNotFound(http.HandlerFunc(NotFound))
 

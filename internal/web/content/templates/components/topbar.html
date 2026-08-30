@@ -1,0 +1,13 @@
+{{/* templates/components/topbar.html */}}
+{{define "topbar"}}
+{{if .ShowTopbar}}
+<div class="topbar">
+  {{if .CurrentUser.ShowAdminBadge}}<span class="pill--admin">admin</span>{{end}}
+  🌱 <span class="topbar-email">{{.CurrentUser.Email}}</span>
+  <form method="POST" action="{{.LogoutAction}}">
+    <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+    <button type="submit">logout</button>
+  </form>
+</div>
+{{end}}
+{{end}}

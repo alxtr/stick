@@ -1,0 +1,13 @@
+{{/* templates/partials/detail/stick-header.html */}}
+{{define "detail-stick-header"}}
+<div class="page-header">
+  <div class="page-icon">{{.Icon}}</div>
+  <div class="page-title">
+    <div class="page-name-row">
+      <h1 class="page-name">{{.Name}}</h1>
+      <span class="status-pill {{.StatusClass}}">{{.StatusLabel}}</span>
+    </div>
+    <div class="page-id">#{{.DisplayID}}</div>
+  </div>
+</div>
+{{end}}

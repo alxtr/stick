@@ -1,0 +1,19 @@
+{{/* templates/partials/detail/history.html */}}
+{{define "detail-history"}}
+<h2 class="section-label">Session history</h2>
+<div class="history-list">
+  {{if .Sessions}}
+  {{range .Sessions}}
+  <div class="session">
+    <div class="session-reason">{{.Reason}}</div>
+    <div class="session-who">{{.HolderEmail}}</div>
+    <div class="session-duration">{{.Duration}}</div>
+    <div class="session-when">{{.TimeRange}}</div>
+  </div>
+  {{end}}
+  {{else}}
+  <div class="no-history">This stick has not been used yet.</div>
+  {{end}}
+</div>
+{{template "pagination" .}}
+{{end}}

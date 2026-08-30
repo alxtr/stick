@@ -1,0 +1,58 @@
+# Version control and development artifacts
+.git/
+.superpowers/
+docs/superpowers/
+
+# Local configuration, credentials, and secrets
+.env*
+config.*
+*.local
+*.local.*
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*credentials*
+*secret*
+*token*
+
+# Compose and local IDP configuration
+docker-compose*.yaml
+docker-compose*.yml
+local-idp.*
+
+# Runtime databases and application data
+data/
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+*.sqlite-*
+
+# Local build outputs and binaries
+stickd
+bin/
+build/
+dist/
+coverage/
+node_modules/
+test-results/
+playwright-report/
+*.exe
+*.dll
+*.so
+*.dylib
+*.bin
+*.out
+*.test
+
+# Local logs, editor files, and OS metadata
+*.log
+*.pid
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+*~

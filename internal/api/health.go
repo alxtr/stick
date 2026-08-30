@@ -24,6 +24,12 @@ func NewHealth(readiness ReadinessChecker) *healthHandler {
 	return &healthHandler{readiness: readiness}
 }
 
+// RegisterHealth registers the liveness and readiness routes.
+func RegisterHealth(router *Router, handler *healthHandler) {
+	router.HandleFunc(http.MethodGet, "/healthz", handler.Liveness)
+	router.HandleFunc(http.MethodGet, "/readyz", handler.Readiness)
+}
+
 // Liveness serves the process liveness probe.
 func (h *healthHandler) Liveness(w http.ResponseWriter, _ *http.Request) {
 	h.writeStatus(w, http.StatusOK, "ok\n")

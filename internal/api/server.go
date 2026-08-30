@@ -58,8 +58,9 @@ func newHandler(service *application.Service, readiness ReadinessChecker, option
 
 	router := NewRouter(parsedPublicURL.Path)
 	apiHandler := New(service, auth.NewJWTValidator(options.JWT), options.AdminEmails, publicURL, options.NotificationsEnabled)
+	healthHandler := NewHealth(readiness)
 
-	RegisterHealth(router, NewHealth(readiness))
+	RegisterHealth(router, healthHandler)
 	Register(router, apiHandler)
 	router.SetNotFound(http.HandlerFunc(NotFound))
 

@@ -1,0 +1,19 @@
+{{/* templates/partials/detail/admin-controls.html */}}
+{{define "detail-admin-controls"}}
+{{if .Stick.ShowAdminControls}}
+<section class="admin-tools" aria-labelledby="admin-tools-title">
+  <h2 class="admin-tools-title" id="admin-tools-title">Admin controls</h2>
+  {{if .Stick.CanRename}}
+  <form method="POST" action="{{.Stick.RenameAction}}">
+    <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+    <input type="hidden" name="version" value="{{.Stick.FormVersion}}">
+    <label class="sr-only" for="stick-name">Stick name</label>
+    <input id="stick-name" type="text" name="name" value="{{.Stick.RenameField.Value}}" maxlength="100"{{if .Stick.RenameField.DescribedBy}} aria-describedby="{{.Stick.RenameField.DescribedBy}}"{{end}}{{if .Stick.RenameField.HasError}} aria-invalid="true"{{end}} required>
+    <button type="submit">Rename</button>
+    {{template "field-error" .Stick.RenameField}}
+  </form>
+  {{end}}
+  {{if .Stick.AdminActionForm}}{{template "stick-action-form" .Stick.AdminActionForm}}{{end}}
+</section>
+{{end}}
+{{end}}

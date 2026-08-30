@@ -1,0 +1,16 @@
+{{/* templates/error.html */}}
+{{template "base" .}}
+
+{{define "title"}}{{.Title}}{{end}}
+
+{{define "content"}}
+<main class="container error-page">
+  <div class="page-header">
+    <div class="page-icon" aria-hidden="true">{{.Icon}}</div>
+    <h1 class="page-name">{{.Heading}}</h1>
+  </div>
+  <p>{{.Message}}</p>
+  {{if .RequestID}}<p class="request-id">Request ID: <code>{{.RequestID}}</code></p>{{end}}
+  <a href="{{.HomeURL}}" class="error-home">Return to the grove</a>
+</main>
+{{end}}

@@ -1,0 +1,26 @@
+services:
+  stickd:
+    image: stick:local
+    build: .
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - stick-data:/data
+    env_file:
+      - .env
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  stick-data:

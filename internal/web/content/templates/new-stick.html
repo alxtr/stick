@@ -1,0 +1,16 @@
+{{/* templates/new-stick.html */}}
+{{template "base" .}}
+
+{{define "title"}}🌿 new stick{{end}}
+
+{{define "content"}}
+<main class="container new-stick-page">
+  <a href="{{.HomeURL}}" class="back">← back to the grove</a>
+  <div class="page-header">
+    <div class="page-icon">🌿</div>
+    <h1 class="page-name">New stick</h1>
+  </div>
+  {{template "alert" .Error}}
+  {{template "new-stick-create-form" .}}
+</main>
+{{end}}

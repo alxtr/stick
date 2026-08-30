@@ -1,0 +1,87 @@
+# Example single-replica Stick deployment using SQLite. For MongoDB, point the
+# database setting in the Secret at a replica set or mongos and remove the PVC
+# and /data volume mount.
+# Create the stick-config Secret from config.yaml as described in README.md,
+# then replace the image and apply this file.
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: stick-data
+  namespace: stick
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stickd
+  namespace: stick
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: stickd
+  template:
+    metadata:
+      labels:
+        app: stickd
+    spec:
+      securityContext:
+        runAsUser: 65532
+        runAsGroup: 65532
+        runAsNonRoot: true
+        fsGroup: 65532
+      containers:
+        - name: stickd
+          image: registry.example.com/stick:1.0.0
+          args: ["-config", "/etc/stick/config.yaml"]
+          ports:
+            - name: http
+              containerPort: 8080
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: config
+              mountPath: /etc/stick
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: stick-data
+        - name: config
+          secret:
+            secretName: stick-config
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: stickd
+  namespace: stick
+spec:
+  selector:
+    app: stickd
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http

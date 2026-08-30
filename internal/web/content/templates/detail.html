@@ -1,0 +1,16 @@
+{{/* templates/detail.html */}}
+{{template "base" .}}
+
+{{define "title"}}{{.Stick.Icon}} {{.Stick.Name}}{{end}}
+
+{{define "content"}}
+<main class="container detail-page">
+  <a href="{{.HomeURL}}" class="back">← back to the grove</a>
+
+  {{template "detail-stick-header" .Stick}}
+  {{template "alert" .Error}}
+  {{template "detail-admin-controls" .}}
+  {{template "detail-stick-state" .}}
+  {{template "detail-history" .}}
+</main>
+{{end}}

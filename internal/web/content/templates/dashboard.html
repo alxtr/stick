@@ -1,0 +1,17 @@
+{{/* templates/dashboard.html */}}
+{{template "base" .}}
+
+{{define "title"}}🌿 the grove{{end}}
+
+{{define "content"}}
+<main class="grove">
+  {{template "dashboard-stick-cards" .Sticks}}
+  {{if .CanCreateStick}}
+  <a href="{{.NewStickURL}}" class="stick-card new-stick">
+    <div class="new-plus">＋</div>
+    <div class="new-label">New stick</div>
+  </a>
+  {{end}}
+</main>
+{{template "dashboard-archived-sticks" .}}
+{{end}}

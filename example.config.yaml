@@ -1,0 +1,75 @@
+# Stick configuration
+# Copy this file to config.yaml and replace the required values.
+# Non-empty STICK_* environment variables override values in this file.
+# The OIDC callback URL is <server.public_url>/auth/callback.
+
+# Required: a filesystem path selects SQLite; a postgres://, postgresql://,
+# mongodb://, or mongodb+srv:// URL selects the backend automatically.
+# MongoDB transactions require a replica set or mongos.
+database: /data/stick.db
+# database: postgres://stick:password@postgres.example.com/stick?sslmode=require
+# database: mongodb://stick:password@mongo.example.com:27017/stick?replicaSet=rs0
+
+server:
+  # Public URL used for links, cookies, redirects, and health probes. HTTPS is
+  # required except for loopback addresses used during local development.
+  # Include the optional application mount path, if one is used.
+  public_url: http://localhost:8080
+  # Address to bind (default: :8080).
+  # listen_addr: :8080
+
+auth:
+  oidc:
+    # Any compliant provider works (for example, Google, Keycloak, or Authentik).
+    issuer: https://accounts.google.com
+    client_id: your-client-id
+    client_secret: your-client-secret
+  # Signs browser session cookies. Use at least 32 random bytes. Generate one
+  # with: openssl rand -hex 32
+  session_secret: replace-with-at-least-32-random-bytes
+  # Admin email addresses are compared case-insensitively.
+  # admin_emails:
+  #   - alice@example.com
+  #   - bob@example.com
+
+# Timezone for displaying notification timestamps (default: UTC).
+# timezone: Europe/London
+
+# Notifications are optional. Configure any combination of backends.
+# Webhook URLs must use HTTPS except for loopback addresses used locally.
+# Each backend can be a mapping for one instance or a list for multiple
+# instances of the same type.
+# notifications:
+#   smtp:
+#     host: smtp.example.com
+#     port: 587
+#     tls_mode: starttls # default; use implicit for SMTP over TLS (usually 465)
+#     username: noreply@example.com
+#     password: your-smtp-password
+#     from: noreply@example.com
+#     subject: "{{.StickName}} is available"
+#     body: |
+#       Hey {{.RecipientName}},
+#
+#       The stick you were waiting for just dropped.
+#
+#       {{.StickName}} was held by {{.HolderEmail}} for {{.Duration}}.
+#       Released at {{.ReleasedAt}}
+#
+#       → Claim it now: {{.BaseURL}}/sticks/{{.StickID}}
+
+# You can also configure a webhook alongside SMTP:
+# notifications:
+#   webhook:
+#     url: https://hooks.example.com/your-hook
+
+# Multiple webhooks use a list:
+# notifications:
+#   webhook:
+#     - url: https://hooks.example.com/first-hook
+#     - url: https://hooks.example.com/second-hook
+
+# Or configure Microsoft Teams alongside the other backends:
+# notifications:
+#   teams:
+#     url: https://your-tenant.webhook.office.com/webhookb2/your-webhook

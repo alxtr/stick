@@ -27,7 +27,7 @@ The stick you were waiting for just dropped.
 {{.StickName}} was held by {{.HolderEmail}} for {{.Duration}}.
 Released at {{.ReleasedAt}}
 
-→ Claim it now: {{.BaseURL}}/sticks/{{.StickID}}`
+→ Claim it now: {{.BaseURL}}/api/v1/sticks/{{.StickID}}`
 
 const (
 	// TLSModeStartTLS upgrades a plaintext SMTP connection before sending

@@ -35,5 +35,3 @@ data/
 config.yaml
 .env
 /stickd
-node_modules/
-test-results/

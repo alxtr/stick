@@ -32,17 +32,14 @@ func (EnvironmentProvider) Apply(_ context.Context, config *Config) error {
 			return err
 		}
 	}
-	if value := os.Getenv("STICK_AUTH_OIDC_ISSUER"); value != "" {
-		config.Auth.OIDC.Issuer = value
+	if value := os.Getenv("STICK_AUTH_IDP_ENDPOINT"); value != "" {
+		config.Auth.IDPEndpoint = value
 	}
-	if value := os.Getenv("STICK_AUTH_OIDC_CLIENT_ID"); value != "" {
-		config.Auth.OIDC.ClientID = value
+	if value := os.Getenv("STICK_AUTH_AUDIENCE"); value != "" {
+		config.Auth.Audience = value
 	}
-	if value := os.Getenv("STICK_AUTH_OIDC_CLIENT_SECRET"); value != "" {
-		config.Auth.OIDC.ClientSecret = value
-	}
-	if value := os.Getenv("STICK_AUTH_SESSION_SECRET"); value != "" {
-		setSessionSecret(config, value)
+	if value := os.Getenv("STICK_AUTH_SCOPE"); value != "" {
+		config.Auth.Scope = value
 	}
 	if value := os.Getenv("STICK_AUTH_ADMIN_EMAILS"); value != "" {
 		config.Auth.AdminEmails = strings.Split(value, ",")

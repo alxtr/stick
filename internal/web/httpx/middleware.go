@@ -1,5 +1,5 @@
-// Package httpx provides the small net/http toolkit shared by the web
-// application's endpoints and middleware.
+// Package httpx provides the small net/http toolkit shared by the service's
+// endpoints and middleware.
 package httpx
 
 import "net/http"

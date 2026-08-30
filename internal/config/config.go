@@ -4,7 +4,6 @@ package config
 import (
 	"time"
 
-	"stick/internal/auth"
 	"stick/internal/publicurl"
 )
 
@@ -30,9 +29,10 @@ type DatabaseConfig struct {
 
 // AuthConfig contains authentication and authorization settings.
 type AuthConfig struct {
-	OIDC          auth.OIDCConfig
-	SessionSecret []byte
-	AdminEmails   []string
+	IDPEndpoint string
+	Audience    string
+	Scope       string
+	AdminEmails []string
 }
 
 // SMTPConfig holds SMTP connection settings and optional email templates.

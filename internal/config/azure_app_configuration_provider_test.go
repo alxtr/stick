@@ -15,8 +15,6 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/data/azappconfig/v2"
 )
 
-const azureTestSecret = "0123456789abcdef0123456789abcdef"
-
 type testAzureCredential struct{}
 
 func (testAzureCredential) GetToken(context.Context, policy.TokenRequestOptions) (azcore.AccessToken, error) {
@@ -51,10 +49,9 @@ func TestAzureAppConfigurationProviderLoadsSettings(t *testing.T) {
 	settings := []map[string]any{
 		{"key": "stick/database", "value": "/tmp/azure.db", "label": "production"},
 		{"key": "stick/server/public_url", "value": "http://localhost:8080", "label": "production"},
-		{"key": "stick/auth/oidc/issuer", "value": "https://issuer.example.com", "label": "production"},
-		{"key": "stick/auth/oidc/client_id", "value": "client-id", "label": "production"},
-		{"key": "stick/auth/oidc/client_secret", "value": "client-secret", "label": "production"},
-		{"key": "stick/auth/session_secret", "value": azureTestSecret, "label": "production"},
+		{"key": "stick/auth/idp_endpoint", "value": "https://issuer.example.com", "label": "production"},
+		{"key": "stick/auth/audience", "value": "stick-api", "label": "production"},
+		{"key": "stick/auth/scope", "value": "stick:use", "label": "production"},
 		{"key": "stick/auth/admin_emails", "value": `["Alice@example.com","bob@example.com"]`, "label": "production", "content_type": "application/json"},
 		{"key": "stick/timezone", "value": "America/New_York", "label": "production"},
 		{"key": "stick/notifications/webhook", "value": `[{"url":"https://hooks.example.com/stick"}]`, "label": "production", "content_type": "application/json"},
@@ -141,10 +138,9 @@ func TestAzureAppConfigurationProviderSupportsCustomSeparator(t *testing.T) {
 	settings := []map[string]string{
 		{"key": "stick.database", "value": "/tmp/azure-dot.db"},
 		{"key": "stick.server.public_url", "value": "http://localhost:8080"},
-		{"key": "stick.auth.oidc.issuer", "value": "https://issuer.example.com"},
-		{"key": "stick.auth.oidc.client_id", "value": "client-id"},
-		{"key": "stick.auth.oidc.client_secret", "value": "client-secret"},
-		{"key": "stick.auth.session_secret", "value": azureTestSecret},
+		{"key": "stick.auth.idp_endpoint", "value": "https://issuer.example.com"},
+		{"key": "stick.auth.audience", "value": "stick-api"},
+		{"key": "stick.auth.scope", "value": "stick:use"},
 	}
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if got := r.URL.Query().Get("key"); got != "stick.*" {

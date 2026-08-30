@@ -18,12 +18,11 @@ import (
 
 func TestMainContextStopsOnCanceledParent(t *testing.T) {
 	t.Setenv("STICK_DATABASE", filepath.Join(t.TempDir(), "stick.db"))
-	t.Setenv("STICK_AUTH_OIDC_ISSUER", "https://accounts.google.com")
-	t.Setenv("STICK_AUTH_OIDC_CLIENT_ID", "client-id")
-	t.Setenv("STICK_AUTH_OIDC_CLIENT_SECRET", "client-secret")
+	t.Setenv("STICK_AUTH_IDP_ENDPOINT", "https://accounts.google.com")
+	t.Setenv("STICK_AUTH_AUDIENCE", "stick-api")
+	t.Setenv("STICK_AUTH_SCOPE", "stick:use")
 	t.Setenv("STICK_SERVER_PUBLIC_URL", "http://localhost:8080")
 	t.Setenv("STICK_SERVER_LISTEN_ADDR", "127.0.0.1:0")
-	t.Setenv("STICK_AUTH_SESSION_SECRET", "0123456789abcdef0123456789abcdef")
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
@@ -133,12 +132,11 @@ func TestBuildConfigProvidersRejectsUnknownProvider(t *testing.T) {
 func setMinimalRuntimeEnv(t *testing.T, databasePath string) {
 	t.Helper()
 	t.Setenv("STICK_DATABASE", databasePath)
-	t.Setenv("STICK_AUTH_OIDC_ISSUER", "https://accounts.google.com")
-	t.Setenv("STICK_AUTH_OIDC_CLIENT_ID", "client-id")
-	t.Setenv("STICK_AUTH_OIDC_CLIENT_SECRET", "client-secret")
+	t.Setenv("STICK_AUTH_IDP_ENDPOINT", "https://accounts.google.com")
+	t.Setenv("STICK_AUTH_AUDIENCE", "stick-api")
+	t.Setenv("STICK_AUTH_SCOPE", "stick:use")
 	t.Setenv("STICK_SERVER_PUBLIC_URL", "http://localhost:8080")
 	t.Setenv("STICK_SERVER_LISTEN_ADDR", "127.0.0.1:0")
-	t.Setenv("STICK_AUTH_SESSION_SECRET", "0123456789abcdef0123456789abcdef")
 }
 
 func TestBuildNotifierWithNoBackendsSucceeds(t *testing.T) {

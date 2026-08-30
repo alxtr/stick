@@ -2,7 +2,8 @@
 
 Stick is a small, self-hosted coordination service for shared operational resources. Users claim a stick with a reason, release it when finished, and can subscribe to release notifications.
 
-- Uses OIDC for login.
+- Provides a JSON REST API with bearer-token authentication and optimistic
+  concurrency using ETags.
 - Supports different storage backends:
   - SQLite (default)
   - PostgreSQL
@@ -29,16 +30,15 @@ Copy the example environment file:
 cp .env.example .env
 ```
 
-Edit `.env` and set the OIDC values, a random session secret, and the public URL. HTTPS is required for non-local deployments.
-
-Register `<public-url>/auth/callback` as the OIDC client's redirect URI.
+Edit `.env` and set the identity-provider endpoint and expected audience and
+scope. The public URL is optional; HTTPS is required for non-local URLs.
 
 ```sh
-openssl rand -hex 32 # use the result for STICK_AUTH_SESSION_SECRET
 docker compose up -d --build
 ```
 
-Stick is available at `STICK_SERVER_PUBLIC_URL`. The Compose file binds it to loopback, so put it behind a TLS reverse proxy for remote access.
+The API is available at `STICK_SERVER_PUBLIC_URL/api/v1`. The Compose file
+binds it to loopback, so put it behind a TLS reverse proxy for remote access.
 
 ### Kubernetes
 
@@ -46,7 +46,7 @@ Create and edit the application configuration. Keep this file private because it
 
 ```sh
 cp example.config.yaml config.yaml
-# edit config.yaml and set a random session_secret
+# edit config.yaml and set the API authentication values
 kubectl create namespace stick
 kubectl -n stick create secret generic stick-config --from-file=config.yaml=./config.yaml
 ```
@@ -59,7 +59,8 @@ kubectl apply -f example.kubernetes.yaml
 
 This creates a single-replica Deployment, Service, and persistent volume claim.
 
-Expose the Service through an Ingress or Gateway, use its HTTPS URL as `STICK_SERVER_PUBLIC_URL`, and register `<public-url>/auth/callback` with the OIDC provider. 
+Expose the Service through an Ingress or Gateway, and use its HTTPS URL as
+`STICK_SERVER_PUBLIC_URL`.
 
 If the application is mounted under a path, include that path in the probe URLs as well.
 
@@ -104,7 +105,7 @@ When Azure is the only structured source, omit `-config`; when combining it
 with a file, use `STICK_CONFIG_PROVIDERS=yaml,azure-app-config,environment`.
 
 Use slash-separated keys such as `stick/database`,
-`stick/server/public_url`, and `stick/auth/oidc/issuer`. Notification lists
+`stick/server/public_url`, and `stick/auth/idp_endpoint`. Notification lists
 should be stored as JSON values with the `application/json` content type.
 The hierarchy separator is configurable (supported values include `/`, `.`,
 `:` and `__`) and defaults to `/`.
@@ -130,10 +131,10 @@ make check
 make image
 ```
 
-The `compose.idp.yaml` override also starts Keycloak for local OIDC development.
+Send an external JWT in the `Authorization: Bearer <token>` header. Resource
+updates require the current `If-Match` ETag; reads return an ETag and support
+`If-None-Match`.
 
-Set `IDP_ADMIN_PASSWORD` in `.env`, configure Keycloak as your OIDC provider, and run it with:
-
-```sh
-docker compose -f compose.yaml -f compose.idp.yaml up -d --build
-```
+The API provides stick listing, creation, rename, archive/unarchive, claim,
+release, history, and notification subscription endpoints below
+`/api/v1`.

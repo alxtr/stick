@@ -83,15 +83,10 @@ type yamlServerConfig struct {
 }
 
 type yamlAuthConfig struct {
-	OIDC          yamlOIDCConfig `yaml:"oidc" json:"oidc"`
-	SessionSecret *string        `yaml:"session_secret" json:"session_secret"`
-	AdminEmails   *[]string      `yaml:"admin_emails" json:"admin_emails"`
-}
-
-type yamlOIDCConfig struct {
-	Issuer       *string `yaml:"issuer" json:"issuer"`
-	ClientID     *string `yaml:"client_id" json:"client_id"`
-	ClientSecret *string `yaml:"client_secret" json:"client_secret"`
+	IDPEndpoint *string   `yaml:"idp_endpoint" json:"idp_endpoint"`
+	Audience    *string   `yaml:"audience" json:"audience"`
+	Scope       *string   `yaml:"scope" json:"scope"`
+	AdminEmails *[]string `yaml:"admin_emails" json:"admin_emails"`
 }
 
 type yamlNotificationsConfig struct {
@@ -137,17 +132,14 @@ func applyYAMLConfig(source yamlConfig, config *Config) error {
 	if source.Server.ListenAddr != nil {
 		config.Server.ListenAddr = strings.TrimSpace(*source.Server.ListenAddr)
 	}
-	if source.Auth.OIDC.Issuer != nil {
-		config.Auth.OIDC.Issuer = *source.Auth.OIDC.Issuer
+	if source.Auth.IDPEndpoint != nil {
+		config.Auth.IDPEndpoint = *source.Auth.IDPEndpoint
 	}
-	if source.Auth.OIDC.ClientID != nil {
-		config.Auth.OIDC.ClientID = *source.Auth.OIDC.ClientID
+	if source.Auth.Audience != nil {
+		config.Auth.Audience = *source.Auth.Audience
 	}
-	if source.Auth.OIDC.ClientSecret != nil {
-		config.Auth.OIDC.ClientSecret = *source.Auth.OIDC.ClientSecret
-	}
-	if source.Auth.SessionSecret != nil {
-		setSessionSecret(config, *source.Auth.SessionSecret)
+	if source.Auth.Scope != nil {
+		config.Auth.Scope = *source.Auth.Scope
 	}
 	if source.Auth.AdminEmails != nil {
 		config.Auth.AdminEmails = append([]string(nil), (*source.Auth.AdminEmails)...)

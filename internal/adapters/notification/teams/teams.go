@@ -107,7 +107,7 @@ func (n *Notifier) Notify(ctx context.Context, notification application.Notifica
 			Name: "Claim it now",
 			Targets: []Target{{
 				OS:  "default",
-				URI: strings.TrimRight(notification.BaseURL, "/") + "/sticks/" + url.PathEscape(notification.StickID),
+				URI: strings.TrimRight(notification.BaseURL, "/") + "/api/v1/sticks/" + url.PathEscape(notification.StickID),
 			}},
 		}}
 	}

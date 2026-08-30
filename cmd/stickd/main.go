@@ -21,6 +21,7 @@ import (
 	"stick/internal/adapters/persistence/postgres"
 	"stick/internal/adapters/persistence/sqlite"
 	"stick/internal/application"
+	"stick/internal/auth"
 	"stick/internal/config"
 	"stick/internal/outbox"
 	"stick/internal/web"
@@ -87,20 +88,18 @@ func mainContext(parent context.Context, args []string) (err error) {
 	}()
 	service := application.NewService(store)
 
-	webRunner, err := web.NewRunner(service, store, web.Options{
+	serverRunner, err := web.NewRunner(service, store, web.Options{
 		PublicURL:            cfg.Server.PublicURL,
 		ListenAddr:           cfg.Server.ListenAddr,
-		OIDC:                 cfg.Auth.OIDC,
-		SessionSecret:        cfg.Auth.SessionSecret,
+		JWT:                  auth.JWTConfig{Endpoint: cfg.Auth.IDPEndpoint, Audience: cfg.Auth.Audience, Scope: cfg.Auth.Scope},
 		AdminEmails:          cfg.Auth.AdminEmails,
-		Timezone:             cfg.Timezone,
 		NotificationsEnabled: notifier != nil,
 	})
 	if err != nil {
-		return fmt.Errorf("web: %w", err)
+		return fmt.Errorf("HTTP server: %w", err)
 	}
 
-	components := []application.Component{webRunner}
+	components := []application.Component{serverRunner}
 	if notifier != nil {
 		components = append(components, outbox.NewWorker(store, notifier, outbox.WorkerOptions{
 			BaseURL:  cfg.Server.PublicURL.String(),

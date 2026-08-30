@@ -1,7 +1,6 @@
 package httpx_test
 
 import (
-	"bytes"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -9,7 +8,6 @@ import (
 	"testing"
 
 	"stick/internal/web/httpx"
-	"stick/internal/web/security"
 )
 
 func TestChainAppliesMiddlewareInOrder(t *testing.T) {
@@ -39,29 +37,26 @@ func TestChainAppliesMiddlewareInOrder(t *testing.T) {
 	}
 }
 
-func TestMiddlewareAppliesLoggingAndCSRFInOrder(t *testing.T) {
-	var logs bytes.Buffer
+func TestRequestLoggerAddsRequestIDAndLogs(t *testing.T) {
+	var logs strings.Builder
 	previous := slog.Default()
 	slog.SetDefault(slog.New(slog.NewTextHandler(&logs, nil)))
 	t.Cleanup(func() { slog.SetDefault(previous) })
-	innerCalled := false
-	inner := http.HandlerFunc(func(http.ResponseWriter, *http.Request) { innerCalled = true })
-	root := httpx.Chain(
-		httpx.RequestLogger,
-		security.CSRFProtection([]byte("secret-32-bytes-minimum-length!!"), nil),
-	)(inner)
+	root := httpx.RequestLogger(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	}))
 	recorder := httptest.NewRecorder()
-	request := httptest.NewRequest(http.MethodPost, "/sticks/aa001/release", nil)
+	request := httptest.NewRequest(http.MethodGet, "/api/v1/sticks", nil)
 	request.Header.Set("X-Request-ID", "known-request-id")
 	root.ServeHTTP(recorder, request)
 
-	if recorder.Code != http.StatusForbidden || innerCalled {
-		t.Fatalf("status=%d innerCalled=%v, want 403/false", recorder.Code, innerCalled)
+	if recorder.Code != http.StatusNoContent {
+		t.Fatalf("status=%d, want 204", recorder.Code)
 	}
 	if recorder.Header().Get("X-Request-ID") != "known-request-id" {
 		t.Fatal("request ID middleware did not run")
 	}
-	if got := logs.String(); !strings.Contains(got, "status=403") || !strings.Contains(got, "request_id=known-request-id") {
+	if got := logs.String(); !strings.Contains(got, "status=204") || !strings.Contains(got, "request_id=known-request-id") {
 		t.Errorf("log = %q", got)
 	}
 }

@@ -2,7 +2,7 @@
 # Copy this file to config.yaml and replace the required values.
 # Non-empty STICK_* environment variables override values from earlier
 # providers. The provider chain itself is selected with STICK_CONFIG_PROVIDERS.
-# The OIDC callback URL is <server.public_url>/auth/callback.
+# The API is available below <server.public_url>/api/v1.
 
 # Required: a filesystem path selects SQLite; a postgres://, postgresql://,
 # mongodb://, or mongodb+srv:// URL selects the backend automatically.
@@ -12,22 +12,17 @@ database: /data/stick.db
 # database: mongodb://stick:password@mongo.example.com:27017/stick?replicaSet=rs0
 
 server:
-  # Public URL used for links, cookies, redirects, and health probes. HTTPS is
-  # required except for loopback addresses used during local development.
-  # Include the optional application mount path, if one is used.
+  # Optional public URL used for notification links and the application mount
+  # path. Defaults to http://localhost. HTTPS is required for non-local URLs.
   public_url: http://localhost:8080
   # Address to bind (default: :8080).
   # listen_addr: :8080
 
 auth:
-  oidc:
-    # Any compliant provider works (for example, Google, Keycloak, or Authentik).
-    issuer: https://accounts.google.com
-    client_id: your-client-id
-    client_secret: your-client-secret
-  # Signs browser session cookies. Use at least 32 random bytes. Generate one
-  # with: openssl rand -hex 32
-  session_secret: replace-with-at-least-32-random-bytes
+  # Identity-provider issuer used to discover signing keys for external bearer JWTs.
+  idp_endpoint: https://accounts.google.com
+  audience: your-api-audience
+  scope: your-required-scope
   # Admin email addresses are compared case-insensitively.
   # admin_emails:
   #   - alice@example.com
@@ -59,7 +54,7 @@ auth:
 #       {{.StickName}} was held by {{.HolderEmail}} for {{.Duration}}.
 #       Released at {{.ReleasedAt}}
 #
-#       → Claim it now: {{.BaseURL}}/sticks/{{.StickID}}
+#       → Claim it now: {{.BaseURL}}/api/v1/sticks/{{.StickID}}
 
 # You can also configure a webhook alongside SMTP:
 # notifications:

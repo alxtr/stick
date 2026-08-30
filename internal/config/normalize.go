@@ -11,17 +11,22 @@ import (
 	"stick/internal/publicurl"
 )
 
-const minSessionSecretBytes = 32
-
 func normalize(config Config) (Config, error) {
 	config.Server.ListenAddr = strings.TrimSpace(config.Server.ListenAddr)
 	if config.Server.ListenAddr == "" {
 		config.Server.ListenAddr = ":8080"
 	}
+	if err := config.Server.PublicURL.Validate(); err != nil {
+		if err := setPublicURL(&config, "http://localhost"); err != nil {
+			return Config{}, err
+		}
+	}
 	if config.Timezone == nil {
 		config.Timezone = time.UTC
 	}
-	config.Auth.SessionSecret = []byte(strings.TrimSpace(string(config.Auth.SessionSecret)))
+	config.Auth.IDPEndpoint = strings.TrimSpace(config.Auth.IDPEndpoint)
+	config.Auth.Audience = strings.TrimSpace(config.Auth.Audience)
+	config.Auth.Scope = strings.TrimSpace(config.Auth.Scope)
 
 	notifications, err := normalizeNotifications(config.Notifications)
 	if err != nil {
@@ -38,15 +43,12 @@ func normalize(config Config) (Config, error) {
 	if !config.Server.PublicURL.IsHTTPS() && !config.Server.PublicURL.IsLoopback() {
 		return Config{}, fmt.Errorf("invalid server.public_url %q: HTTPS is required for non-local addresses", config.Server.PublicURL)
 	}
-	issuer, err := parseHTTPURL("auth.oidc.issuer", config.Auth.OIDC.Issuer)
+	endpoint, err := parseHTTPURL("auth.idp_endpoint", config.Auth.IDPEndpoint)
 	if err != nil {
 		return Config{}, err
 	}
-	if issuer.RawQuery != "" || issuer.Fragment != "" {
-		return Config{}, fmt.Errorf("invalid auth.oidc.issuer %q: must not include a query or fragment", config.Auth.OIDC.Issuer)
-	}
-	if err := validateSessionSecret(config.Auth.SessionSecret); err != nil {
-		return Config{}, err
+	if endpoint.RawQuery != "" || endpoint.Fragment != "" {
+		return Config{}, fmt.Errorf("invalid auth.idp_endpoint %q: must not include a query or fragment", config.Auth.IDPEndpoint)
 	}
 
 	config.Auth.AdminEmails = append([]string(nil), config.Auth.AdminEmails...)
@@ -55,12 +57,10 @@ func normalize(config Config) (Config, error) {
 
 func validateRequired(config Config) error {
 	required := map[string]bool{
-		"database":                strings.TrimSpace(config.Database.DSN) != "",
-		"server.public_url":       config.Server.PublicURL.Validate() == nil,
-		"auth.oidc.issuer":        strings.TrimSpace(config.Auth.OIDC.Issuer) != "",
-		"auth.oidc.client_id":     strings.TrimSpace(config.Auth.OIDC.ClientID) != "",
-		"auth.oidc.client_secret": strings.TrimSpace(config.Auth.OIDC.ClientSecret) != "",
-		"auth.session_secret":     len(config.Auth.SessionSecret) > 0,
+		"database":          strings.TrimSpace(config.Database.DSN) != "",
+		"auth.idp_endpoint": strings.TrimSpace(config.Auth.IDPEndpoint) != "",
+		"auth.audience":     strings.TrimSpace(config.Auth.Audience) != "",
+		"auth.scope":        strings.TrimSpace(config.Auth.Scope) != "",
 	}
 	var missing []string
 	for field, present := range required {
@@ -150,13 +150,6 @@ func parseHTTPURL(name, value string) (*url.URL, error) {
 	return parsed, nil
 }
 
-func validateSessionSecret(secret []byte) error {
-	if len(secret) < minSessionSecretBytes {
-		return fmt.Errorf("auth.session_secret must be at least %d bytes", minSessionSecretBytes)
-	}
-	return nil
-}
-
 func setDatabase(config *Config, value string) error {
 	database, err := normalizeDatabase(value)
 	if err != nil {
@@ -167,7 +160,7 @@ func setDatabase(config *Config, value string) error {
 }
 
 func setPublicURL(config *Config, value string) error {
-	publicURL, err := publicurl.Parse(value)
+	publicURL, err := publicurl.Parse(strings.TrimSpace(value))
 	if err != nil {
 		return err
 	}
@@ -176,14 +169,10 @@ func setPublicURL(config *Config, value string) error {
 }
 
 func setTimezone(config *Config, value string) error {
-	location, err := time.LoadLocation(value)
+	location, err := time.LoadLocation(strings.TrimSpace(value))
 	if err != nil {
 		return fmt.Errorf("invalid timezone %q: %w", value, err)
 	}
 	config.Timezone = location
 	return nil
-}
-
-func setSessionSecret(config *Config, value string) {
-	config.Auth.SessionSecret = []byte(strings.TrimSpace(value))
 }

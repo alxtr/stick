@@ -70,25 +70,9 @@ jobs:
           vuln-type: os,library
           severity: CRITICAL,HIGH
 
-  browser:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-go@v6
-        with:
-          go-version-file: go.mod
-          cache: true
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 24
-          cache: npm
-      - run: npm ci
-      - run: npx playwright install --with-deps --only-shell chromium
-      - run: npm run test:browser
-
   publish-image:
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
-    needs: [test, race, lint, analysis, image, browser]
+    needs: [test, race, lint, analysis, image]
     runs-on: ubuntu-latest
     permissions:
       contents: read

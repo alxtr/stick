@@ -35,8 +35,8 @@ func (h *Handler) Readiness(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), readinessTimeout)
 	defer cancel()
 	// Readiness deliberately reflects only the required database dependency.
-	// OIDC discovery is lazy, so an identity-provider outage does not remove
-	// otherwise healthy instances from service.
+	// Identity-provider discovery is lazy, so an identity-provider outage does
+	// not remove otherwise healthy instances from service.
 	if h.readiness == nil || h.readiness.PingContext(ctx) != nil {
 		h.writeStatus(w, http.StatusServiceUnavailable, "not ready\n")
 		return

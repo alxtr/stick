@@ -7,7 +7,7 @@ BUILD_DATE ?= unknown
 LDFLAGS := -s -w -X main.commit=$(COMMIT) -X main.buildDate=$(BUILD_DATE)
 GO_FILES := $(shell find . -type d \( -name .git -o -name data -o -name node_modules -o -name vendor \) -prune -o -type f -name '*.go' -print)
 
-.PHONY: build fmt verify-format test test-integration test-e2e test-race vet lint govulncheck image check run clean
+.PHONY: build fmt verify-format test test-integration test-race vet lint govulncheck image check run clean
 
 build:
 	$(GOENV) CGO_ENABLED=0 go build -trimpath -ldflags "$(LDFLAGS)" -o $(BINARY) ./cmd/stickd
@@ -28,9 +28,6 @@ test:
 
 test-integration:
 	$(GOENV) CGO_ENABLED=0 go test -count=1 ./test/integration
-
-test-e2e:
-	$(GOENV) CGO_ENABLED=0 go test -count=1 ./test/e2e
 
 test-race:
 	$(GOENV) go test -race $(TEST_FLAGS) ./...

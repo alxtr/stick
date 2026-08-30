@@ -58,12 +58,6 @@ func (r *Router) HandleFunc(method, reference string, handler http.HandlerFunc, 
 	r.Handle(method, reference, handler, middlewares...)
 }
 
-// HandleMount registers a handler for the bare non-root application mount.
-func (r *Router) HandleMount(method string, handler http.Handler, middlewares ...Middleware) {
-	combined := append(slices.Clone(r.middlewares), middlewares...)
-	r.mux.Handle(method+" "+r.publicURL.MountPath(), Chain(combined...)(handler))
-}
-
 func (r *Router) containsRequestPath(path string) bool {
 	mount := r.publicURL.MountPath()
 	return mount == "" || path == mount || strings.HasPrefix(path, mount+"/")

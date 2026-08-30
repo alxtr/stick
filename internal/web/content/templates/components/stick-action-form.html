@@ -1,9 +1,0 @@
-{{/* templates/components/stick-action-form.html */}}
-{{define "stick-action-form"}}
-<form method="POST" action="{{.Action}}">
-  <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
-  <input type="hidden" name="version" value="{{.FormVersion}}">
-  {{if .RedirectTo}}<input type="hidden" name="redirect_to" value="{{.RedirectTo}}">{{end}}
-  <button type="submit"{{if .ButtonClass}} class="{{.ButtonClass}}"{{end}}>{{.ButtonLabel}}</button>
-</form>
-{{end}}

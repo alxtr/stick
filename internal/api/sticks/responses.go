@@ -1,4 +1,4 @@
-package api
+package sticks
 
 import (
 	"crypto/sha256"
@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"stick/internal/api/requestlog"
 	"stick/internal/application"
 	domain "stick/internal/core"
 )
@@ -109,7 +110,7 @@ func unauthorized(w http.ResponseWriter) {
 }
 
 func internalError(w http.ResponseWriter, r *http.Request, operation string, err error) {
-	LogError(r.Context(), "request failed", operation, err)
+	requestlog.LogError(r.Context(), "request failed", operation, err)
 	writeError(w, http.StatusInternalServerError, "internal server error")
 }
 

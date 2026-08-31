@@ -10,6 +10,8 @@ import (
 	"net/url"
 	"time"
 
+	"stick/internal/api/health"
+	"stick/internal/api/sticks"
 	"stick/internal/application"
 	"stick/internal/auth"
 	"stick/internal/publicurl"
@@ -34,7 +36,7 @@ type Runner struct {
 // NewRunner builds the HTTP application and its dependency graph.
 // Listening is intentionally deferred to Run so startup failures are reported
 // through the runner lifecycle rather than escaping during HTTP composition.
-func NewRunner(service *application.Service, readiness ReadinessChecker, options Options) (*Runner, error) {
+func NewRunner(service *application.Service, readiness health.ReadinessChecker, options Options) (*Runner, error) {
 	handler, err := newHandler(service, readiness, options)
 	if err != nil {
 		return nil, fmt.Errorf("HTTP server: %w", err)
@@ -46,7 +48,7 @@ func NewRunner(service *application.Service, readiness ReadinessChecker, options
 }
 
 // newHandler builds the complete HTTP graph.
-func newHandler(service *application.Service, readiness ReadinessChecker, options Options) (http.Handler, error) {
+func newHandler(service *application.Service, readiness health.ReadinessChecker, options Options) (http.Handler, error) {
 	publicURL, err := publicurl.Parse(options.PublicURL)
 	if err != nil {
 		return nil, fmt.Errorf("public URL: %w", err)
@@ -57,11 +59,11 @@ func newHandler(service *application.Service, readiness ReadinessChecker, option
 	}
 
 	router := NewRouter(parsedPublicURL.Path)
-	healthHandler := NewHealth(readiness)
-	apiHandler := New(service, auth.NewJWTValidator(options.JWT), options.AdminEmails, publicURL, options.NotificationsEnabled)
+	healthHandler := health.New(readiness)
+	sticksHandler := sticks.New(service, auth.NewJWTValidator(options.JWT), options.AdminEmails, publicURL, options.NotificationsEnabled)
 
 	healthHandler.Register(router)
-	apiHandler.Register(router)
+	sticksHandler.Register(router)
 	router.SetNotFound(http.HandlerFunc(NotFound))
 
 	middlewares := Chain(

@@ -1,5 +1,5 @@
-// Package server composes the HTTP application and owns its lifecycle.
-package server
+// Package api composes the HTTP application and owns its lifecycle.
+package api
 
 import (
 	"context"

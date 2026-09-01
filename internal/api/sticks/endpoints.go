@@ -4,21 +4,22 @@ import (
 	"net/http"
 
 	"stick/internal/auth"
+	"stick/internal/web/httpx"
 )
 
 func (h *Handler) listSticks(w http.ResponseWriter, r *http.Request) {
 	sticks, err := h.service.ListSticks(r.Context())
 	if err != nil {
-		internalError(w, r, "list sticks", err)
+		httpx.InternalError(w, r, "list sticks", err)
 		return
 	}
-	writeCollection(w, r, sticksToJSON(sticks))
+	httpx.WriteCollection(w, r, sticksToJSON(sticks))
 }
 
 func (h *Handler) listArchivedSticks(w http.ResponseWriter, r *http.Request) {
 	identity := auth.IdentityFromContext(r.Context())
 	if !identity.IsAdmin {
-		writeError(w, http.StatusForbidden, "forbidden")
+		httpx.WriteError(w, http.StatusForbidden, "forbidden")
 		return
 	}
 	sticks, err := h.service.ListArchivedSticks(r.Context(), identity)
@@ -26,7 +27,7 @@ func (h *Handler) listArchivedSticks(w http.ResponseWriter, r *http.Request) {
 		handleError(w, r, "list archived sticks", err)
 		return
 	}
-	writeCollection(w, r, sticksToJSON(sticks))
+	httpx.WriteCollection(w, r, sticksToJSON(sticks))
 }
 
 func (h *Handler) getStick(w http.ResponseWriter, r *http.Request) {
@@ -35,23 +36,23 @@ func (h *Handler) getStick(w http.ResponseWriter, r *http.Request) {
 		handleError(w, r, "get stick", err)
 		return
 	}
-	setETag(w, stick.Version)
-	if ifNoneMatch(headerValue(r, "If-None-Match"), etag(stick.Version)) {
-		notModified(w)
+	httpx.SetETag(w, stick.Version)
+	if httpx.IfNoneMatch(httpx.HeaderValue(r, "If-None-Match"), httpx.ETag(stick.Version)) {
+		httpx.NotModified(w)
 		return
 	}
-	writeJSON(w, http.StatusOK, stickToJSON(stick))
+	httpx.WriteJSON(w, http.StatusOK, stickToJSON(stick))
 }
 
 func (h *Handler) createStick(w http.ResponseWriter, r *http.Request) {
 	if !auth.IdentityFromContext(r.Context()).IsAdmin {
-		writeError(w, http.StatusForbidden, "forbidden")
+		httpx.WriteError(w, http.StatusForbidden, "forbidden")
 		return
 	}
 	var request struct {
 		Name string `json:"name"`
 	}
-	if !decodeJSON(w, r, &request) {
+	if !httpx.DecodeJSON(w, r, &request) {
 		return
 	}
 	stick, err := h.service.CreateStick(r.Context(), auth.IdentityFromContext(r.Context()), request.Name)
@@ -59,20 +60,20 @@ func (h *Handler) createStick(w http.ResponseWriter, r *http.Request) {
 		handleError(w, r, "create stick", err)
 		return
 	}
-	setETag(w, stick.Version)
+	httpx.SetETag(w, stick.Version)
 	w.Header().Set("Location", h.publicURL+apiPrefix+"/sticks/"+stick.ID)
-	writeJSON(w, http.StatusCreated, stickToJSON(stick))
+	httpx.WriteJSON(w, http.StatusCreated, stickToJSON(stick))
 }
 
 func (h *Handler) renameStick(w http.ResponseWriter, r *http.Request) {
 	if !auth.IdentityFromContext(r.Context()).IsAdmin {
-		writeError(w, http.StatusForbidden, "forbidden")
+		httpx.WriteError(w, http.StatusForbidden, "forbidden")
 		return
 	}
 	var request struct {
 		Name string `json:"name"`
 	}
-	if !decodeJSON(w, r, &request) {
+	if !httpx.DecodeJSON(w, r, &request) {
 		return
 	}
 	version, ok := h.expectedVersion(w, r, r.PathValue("id"))
@@ -89,7 +90,7 @@ func (h *Handler) renameStick(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) archiveStick(w http.ResponseWriter, r *http.Request) {
 	if !auth.IdentityFromContext(r.Context()).IsAdmin {
-		writeError(w, http.StatusForbidden, "forbidden")
+		httpx.WriteError(w, http.StatusForbidden, "forbidden")
 		return
 	}
 	version, ok := h.expectedVersion(w, r, r.PathValue("id"))
@@ -106,7 +107,7 @@ func (h *Handler) archiveStick(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) unarchiveStick(w http.ResponseWriter, r *http.Request) {
 	if !auth.IdentityFromContext(r.Context()).IsAdmin {
-		writeError(w, http.StatusForbidden, "forbidden")
+		httpx.WriteError(w, http.StatusForbidden, "forbidden")
 		return
 	}
 	version, ok := h.expectedVersion(w, r, r.PathValue("id"))
@@ -125,7 +126,7 @@ func (h *Handler) claimStick(w http.ResponseWriter, r *http.Request) {
 	var request struct {
 		Reason string `json:"reason"`
 	}
-	if !decodeJSON(w, r, &request) {
+	if !httpx.DecodeJSON(w, r, &request) {
 		return
 	}
 	version, ok := h.expectedVersion(w, r, r.PathValue("id"))
@@ -161,7 +162,7 @@ func (h *Handler) history(w http.ResponseWriter, r *http.Request) {
 		handleError(w, r, "get stick history", err)
 		return
 	}
-	setETag(w, stick.Version)
+	httpx.SetETag(w, stick.Version)
 	limit, offset, ok := historyPagination(w, r)
 	if !ok {
 		return
@@ -182,5 +183,5 @@ func (h *Handler) history(w http.ResponseWriter, r *http.Request) {
 		Limit:    limit,
 		Offset:   offset,
 	}
-	writeConditionalJSON(w, r, response)
+	httpx.WriteConditionalJSON(w, r, response)
 }

@@ -7,17 +7,18 @@ import (
 	"strings"
 
 	"stick/internal/auth"
+	"stick/internal/web/httpx"
 )
 
 func (h *Handler) expectedVersion(w http.ResponseWriter, r *http.Request, id string) (int64, bool) {
-	header := headerValue(r, "If-Match")
+	header := httpx.HeaderValue(r, "If-Match")
 	if strings.TrimSpace(header) == "" {
-		writeError(w, http.StatusPreconditionRequired, "If-Match header is required")
+		httpx.WriteError(w, http.StatusPreconditionRequired, "If-Match header is required")
 		return 0, false
 	}
 	tags, wildcard, err := parseIfMatch(header)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid If-Match header")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid If-Match header")
 		return 0, false
 	}
 	if len(tags) == 1 && !wildcard {
@@ -40,7 +41,7 @@ func (h *Handler) expectedVersion(w http.ResponseWriter, r *http.Request, id str
 			}
 		}
 		if !matched {
-			writeError(w, http.StatusPreconditionFailed, "precondition failed")
+			httpx.WriteError(w, http.StatusPreconditionFailed, "precondition failed")
 			return 0, false
 		}
 	}
@@ -55,14 +56,14 @@ func historyPagination(w http.ResponseWriter, r *http.Request) (int, int, bool) 
 	if raw := query.Get("limit"); raw != "" {
 		limit, err = strconv.Atoi(raw)
 		if err != nil || limit < 1 || limit > maxHistoryLimit {
-			writeError(w, http.StatusBadRequest, "invalid history limit")
+			httpx.WriteError(w, http.StatusBadRequest, "invalid history limit")
 			return 0, 0, false
 		}
 	}
 	if raw := query.Get("offset"); raw != "" {
 		offset, err = strconv.Atoi(raw)
 		if err != nil || offset < 0 || offset > maxHistoryOffset {
-			writeError(w, http.StatusBadRequest, "invalid history offset")
+			httpx.WriteError(w, http.StatusBadRequest, "invalid history offset")
 			return 0, 0, false
 		}
 	}
@@ -85,7 +86,7 @@ func parseIfMatch(value string) ([]int64, bool, error) {
 			return nil, false, errors.New("invalid entity tag")
 		}
 		version, err := strconv.ParseInt(part[1:len(part)-1], 10, 64)
-		if err != nil || version < 1 || etag(version) != part {
+		if err != nil || version < 1 || httpx.ETag(version) != part {
 			return nil, false, errors.New("invalid entity tag")
 		}
 		tags = append(tags, version)
@@ -94,20 +95,4 @@ func parseIfMatch(value string) ([]int64, bool, error) {
 		return nil, false, errors.New("missing entity tag")
 	}
 	return tags, false, nil
-}
-
-func ifNoneMatch(header, current string) bool {
-	for _, part := range strings.Split(header, ",") {
-		part = strings.TrimSpace(part)
-		if part == "*" {
-			return true
-		}
-		if strings.HasPrefix(part, "W/") {
-			part = strings.TrimSpace(strings.TrimPrefix(part, "W/"))
-		}
-		if part == current {
-			return true
-		}
-	}
-	return false
 }

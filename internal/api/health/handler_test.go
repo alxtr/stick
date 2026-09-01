@@ -1,4 +1,4 @@
-package api
+package health_test
 
 import (
 	"context"
@@ -7,6 +7,9 @@ import (
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"stick/internal/api/health"
+	"stick/internal/web/httpx"
 )
 
 type healthDB struct {
@@ -33,12 +36,12 @@ func TestHealthRoutes(t *testing.T) {
 		{name: "missing dependency", path: "/readyz", wantStatus: http.StatusServiceUnavailable, wantBody: "not ready\n"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			router := NewRouter("/stick")
-			var readiness ReadinessChecker
+			router := httpx.NewRouter("/stick")
+			var readiness health.ReadinessChecker
 			if test.readiness != nil {
 				readiness = test.readiness
 			}
-			NewHealth(readiness).Register(router)
+			health.New(readiness).Register(router)
 			recorder := httptest.NewRecorder()
 			router.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/stick"+test.path, nil))
 
@@ -53,8 +56,8 @@ func TestHealthRoutes(t *testing.T) {
 			}
 			if test.path == "/readyz" && test.readiness != nil {
 				remaining := time.Until(test.readiness.deadline)
-				if remaining <= 0 || remaining > readinessTimeout {
-					t.Errorf("readiness deadline remaining = %s, want (0, %s]", remaining, readinessTimeout)
+				if remaining <= 0 || remaining > health.ReadinessTimeout {
+					t.Errorf("readiness deadline remaining = %s, want (0, %s]", remaining, health.ReadinessTimeout)
 				}
 			}
 		})

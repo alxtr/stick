@@ -1,4 +1,4 @@
-package api_test
+package httpx_test
 
 import (
 	"log/slog"
@@ -7,12 +7,12 @@ import (
 	"strings"
 	"testing"
 
-	"stick/internal/api"
+	"stick/internal/web/httpx"
 )
 
 func TestChainAppliesMiddlewareInOrder(t *testing.T) {
 	var calls []string
-	record := func(name string) api.Middleware {
+	record := func(name string) httpx.Middleware {
 		return func(next http.Handler) http.Handler {
 			return http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
 				calls = append(calls, name+" before")
@@ -25,7 +25,7 @@ func TestChainAppliesMiddlewareInOrder(t *testing.T) {
 		calls = append(calls, "handler")
 	})
 
-	stack := api.Chain(record("first"), record("second"))
+	stack := httpx.Chain(record("first"), record("second"))
 	stack(final).ServeHTTP(
 		httptest.NewRecorder(),
 		httptest.NewRequest(http.MethodGet, "/", nil),
@@ -42,7 +42,7 @@ func TestRequestLoggerAddsRequestIDAndLogs(t *testing.T) {
 	previous := slog.Default()
 	slog.SetDefault(slog.New(slog.NewTextHandler(&logs, nil)))
 	t.Cleanup(func() { slog.SetDefault(previous) })
-	root := api.RequestLogger(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	root := httpx.RequestLogger(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 	}))
 	recorder := httptest.NewRecorder()

@@ -20,7 +20,7 @@ import (
 	"stick/internal/adapters/persistence/mongodb"
 	"stick/internal/adapters/persistence/postgres"
 	"stick/internal/adapters/persistence/sqlite"
-	"stick/internal/api"
+	"stick/internal/api/server"
 	"stick/internal/application"
 	"stick/internal/auth"
 	"stick/internal/config"
@@ -89,7 +89,7 @@ func mainContext(parent context.Context, args []string) (err error) {
 	}()
 	service := application.NewService(store)
 
-	serverRunner, err := api.NewRunner(service, store, api.Options{
+	serverRunner, err := server.NewRunner(service, store, server.Options{
 		PublicURL:            cfg.Server.PublicURL,
 		ListenAddr:           cfg.Server.ListenAddr,
 		JWT:                  auth.JWTConfig{Endpoint: cfg.Auth.IDPEndpoint, Audience: cfg.Auth.Audience, Scope: cfg.Auth.Scope},

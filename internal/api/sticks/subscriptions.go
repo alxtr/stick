@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"stick/internal/auth"
+	"stick/internal/web/httpx"
 )
 
 func (h *Handler) subscribe(w http.ResponseWriter, r *http.Request) {
@@ -15,7 +16,7 @@ func (h *Handler) subscribe(w http.ResponseWriter, r *http.Request) {
 		handleError(w, r, "subscribe to stick", err)
 		return
 	}
-	setETag(w, version)
+	httpx.SetETag(w, version)
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -28,18 +29,18 @@ func (h *Handler) unsubscribe(w http.ResponseWriter, r *http.Request) {
 		handleError(w, r, "unsubscribe from stick", err)
 		return
 	}
-	setETag(w, version)
+	httpx.SetETag(w, version)
 	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *Handler) subscriptions(w http.ResponseWriter, r *http.Request) {
 	ids, err := h.service.SubscribedStickIDs(r.Context(), auth.IdentityFromContext(r.Context()))
 	if err != nil {
-		internalError(w, r, "list subscriptions", err)
+		httpx.InternalError(w, r, "list subscriptions", err)
 		return
 	}
 	if ids == nil {
 		ids = []string{}
 	}
-	writeCollection(w, r, ids)
+	httpx.WriteCollection(w, r, ids)
 }

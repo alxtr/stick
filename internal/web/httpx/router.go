@@ -1,4 +1,6 @@
-package api
+// Package httpx provides reusable net/http routing and middleware
+// infrastructure.
+package httpx
 
 import (
 	"fmt"

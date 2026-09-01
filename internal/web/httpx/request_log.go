@@ -1,5 +1,4 @@
-// Package requestlog provides request logging and request-ID context helpers.
-package requestlog
+package httpx
 
 import (
 	"context"

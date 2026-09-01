@@ -5,6 +5,8 @@ import (
 	"context"
 	"net/http"
 	"time"
+
+	"stick/internal/web/httpx"
 )
 
 const (
@@ -12,13 +14,6 @@ const (
 	// dependency.
 	ReadinessTimeout = 2 * time.Second
 )
-
-// RouteRegistrar is the part of the API router needed to register routes.
-// Keeping the interface here avoids coupling route groups to the server's
-// router implementation.
-type RouteRegistrar interface {
-	HandleFunc(method, reference string, handler http.HandlerFunc, middlewares ...func(http.Handler) http.Handler)
-}
 
 // ReadinessChecker is the dependency used by the readiness probe.
 type ReadinessChecker interface {
@@ -37,7 +32,7 @@ func New(readiness ReadinessChecker) *Handler {
 }
 
 // Register adds the liveness and readiness routes to router.
-func (h *Handler) Register(router RouteRegistrar) {
+func (h *Handler) Register(router *httpx.Router) {
 	router.HandleFunc(http.MethodGet, "/healthz", h.Liveness)
 	router.HandleFunc(http.MethodGet, "/readyz", h.Readiness)
 }

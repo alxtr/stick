@@ -1,4 +1,5 @@
-package api
+// Package server composes the HTTP application and owns its lifecycle.
+package server
 
 import (
 	"context"
@@ -15,6 +16,7 @@ import (
 	"stick/internal/application"
 	"stick/internal/auth"
 	"stick/internal/publicurl"
+	"stick/internal/web/httpx"
 )
 
 // Options contains the settings required to build the HTTP server.
@@ -58,17 +60,17 @@ func newHandler(service *application.Service, readiness health.ReadinessChecker,
 		return nil, fmt.Errorf("public URL: %w", err)
 	}
 
-	router := NewRouter(parsedPublicURL.Path)
+	router := httpx.NewRouter(parsedPublicURL.Path)
 	healthHandler := health.New(readiness)
 	sticksHandler := sticks.New(service, auth.NewJWTValidator(options.JWT), options.AdminEmails, publicURL, options.NotificationsEnabled)
 
 	healthHandler.Register(router)
 	sticksHandler.Register(router)
-	router.SetNotFound(http.HandlerFunc(NotFound))
+	router.SetNotFound(http.HandlerFunc(httpx.NotFound))
 
-	middlewares := Chain(
-		RequestLogger,
-		Headers)
+	middlewares := httpx.Chain(
+		httpx.RequestLogger,
+		httpx.Headers)
 	return middlewares(router), nil
 }
 

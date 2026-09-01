@@ -1,11 +1,11 @@
-package api_test
+package httpx_test
 
 import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
-	"stick/internal/api"
+	"stick/internal/web/httpx"
 )
 
 func testMountPath(t *testing.T, mountPath string) string {
@@ -14,13 +14,13 @@ func testMountPath(t *testing.T, mountPath string) string {
 }
 
 func TestRouterWithScopesMiddleware(t *testing.T) {
-	routes := api.NewRouter(testMountPath(t, ""))
+	routes := httpx.NewRouter(testMountPath(t, ""))
 	reject := func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(response http.ResponseWriter, _ *http.Request) {
 			response.WriteHeader(http.StatusUnauthorized)
 		})
 	}
-	protected := routes.With(api.Chain(reject))
+	protected := routes.With(httpx.Chain(reject))
 	routes.Handle(http.MethodGet, "/public", http.HandlerFunc(func(response http.ResponseWriter, _ *http.Request) {
 		response.WriteHeader(http.StatusNoContent)
 	}))
@@ -42,7 +42,7 @@ func TestRouterWithScopesMiddleware(t *testing.T) {
 }
 
 func TestRouterPreservesNestedMountAndPathValues(t *testing.T) {
-	routes := api.NewRouter(testMountPath(t, "/ops/stick"))
+	routes := httpx.NewRouter(testMountPath(t, "/ops/stick"))
 	routes.HandleFunc(http.MethodGet, "/sticks/{id}", func(w http.ResponseWriter, r *http.Request) {
 		if got := r.URL.Path; got != "/ops/stick/sticks/aa001" {
 			t.Errorf("handler path = %q", got)
@@ -65,7 +65,7 @@ func TestRouterPreservesNestedMountAndPathValues(t *testing.T) {
 }
 
 func TestRouterUsesCustomNotFoundOnlyInsideMount(t *testing.T) {
-	routes := api.NewRouter(testMountPath(t, "/stick"))
+	routes := httpx.NewRouter(testMountPath(t, "/stick"))
 	routes.SetNotFound(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
 		w.WriteHeader(http.StatusNotFound)
@@ -86,7 +86,7 @@ func TestRouterUsesCustomNotFoundOnlyInsideMount(t *testing.T) {
 }
 
 func TestRouterCustomNotFoundAndRedirectSemantics(t *testing.T) {
-	routes := api.NewRouter(testMountPath(t, "/stick"))
+	routes := httpx.NewRouter(testMountPath(t, "/stick"))
 	routes.SetNotFound(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
 		w.WriteHeader(http.StatusNotFound)
@@ -136,7 +136,7 @@ func TestRouterCustomNotFoundAndRedirectSemantics(t *testing.T) {
 }
 
 func TestRouterRejectsUntrustedReferences(t *testing.T) {
-	routes := api.NewRouter("/stick")
+	routes := httpx.NewRouter("/stick")
 	for _, reference := range []string{"", "api/v1/sticks", "//evil.example", `/stick\\one`, "/stick#fragment"} {
 		t.Run(reference, func(t *testing.T) {
 			defer func() {

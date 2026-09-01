@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"stick/internal/web/httpx"
+	"stick/internal/httpx"
 )
 
 func TestRequestIDContext(t *testing.T) {

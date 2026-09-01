@@ -17,7 +17,7 @@ type Router struct {
 	notFound    http.Handler
 }
 
-// NewRouter returns a mount-aware router. mountPath is the optional path from
+// NewRouter returns a mount-aware HTTP router. mountPath is the optional path from
 // an already parsed and validated public URL; the router has no reason to know
 // the URL's origin.
 func NewRouter(mountPath string) *Router {

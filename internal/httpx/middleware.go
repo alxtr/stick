@@ -2,7 +2,7 @@ package httpx
 
 import "net/http"
 
-// Middleware wraps an HTTP handler with cross-cutting request behavior.
+// Middleware wraps an HTTP handler with cross-cutting HTTP behavior.
 type Middleware = func(http.Handler) http.Handler
 
 // Chain combines middleware in outermost-to-innermost order.

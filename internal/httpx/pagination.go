@@ -6,7 +6,7 @@ import (
 	"strconv"
 )
 
-// PaginationOptions controls the accepted pagination range.
+// PaginationOptions controls the accepted HTTP pagination range.
 type PaginationOptions struct {
 	DefaultLimit int
 	MaxLimit     int

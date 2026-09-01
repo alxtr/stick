@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"stick/internal/web/httpx"
+	"stick/internal/httpx"
 )
 
 func TestChainAppliesMiddlewareInOrder(t *testing.T) {

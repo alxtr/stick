@@ -9,7 +9,7 @@ import (
 	"stick/internal/application"
 	"stick/internal/auth"
 	domain "stick/internal/core"
-	"stick/internal/web/httpx"
+	"stick/internal/httpx"
 )
 
 const (

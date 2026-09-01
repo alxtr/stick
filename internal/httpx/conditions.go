@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-// ParseIfMatch parses one numeric entity tag from an If-Match value.
+// ParseIfMatch parses one numeric HTTP entity tag from an If-Match value.
 func ParseIfMatch(value string) (int64, error) {
 	value = strings.TrimSpace(value)
 	if value == "" {

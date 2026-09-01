@@ -15,8 +15,8 @@ import (
 	"stick/internal/api/sticks"
 	"stick/internal/application"
 	"stick/internal/auth"
+	"stick/internal/httpx"
 	"stick/internal/publicurl"
-	"stick/internal/web/httpx"
 )
 
 // Options contains the settings required to build the HTTP server.

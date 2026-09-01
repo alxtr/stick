@@ -14,7 +14,7 @@ import (
 	"stick/internal/api/sticks"
 	"stick/internal/application"
 	domain "stick/internal/core"
-	"stick/internal/web/httpx"
+	"stick/internal/httpx"
 )
 
 type tokenValidator map[string]domain.Identity

@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"stick/internal/web/httpx"
+	"stick/internal/httpx"
 )
 
 const (

@@ -64,7 +64,7 @@ func WriteJSON(w http.ResponseWriter, status int, value any) {
 	WriteData(w, status, data)
 }
 
-// WriteData writes already-marshaled JSON response data.
+// WriteData writes already-marshaled JSON HTTP response data.
 func WriteData(w http.ResponseWriter, status int, data []byte) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "no-store")

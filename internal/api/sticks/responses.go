@@ -7,7 +7,7 @@ import (
 
 	"stick/internal/application"
 	domain "stick/internal/core"
-	"stick/internal/web/httpx"
+	"stick/internal/httpx"
 )
 
 func writeStick(w http.ResponseWriter, stick domain.Stick) {

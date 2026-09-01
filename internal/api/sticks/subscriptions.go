@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"stick/internal/auth"
-	"stick/internal/web/httpx"
+	"stick/internal/httpx"
 )
 
 func (h *Handler) subscribe(w http.ResponseWriter, r *http.Request) {

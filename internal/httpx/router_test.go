@@ -5,7 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"stick/internal/web/httpx"
+	"stick/internal/httpx"
 )
 
 func testMountPath(t *testing.T, mountPath string) string {

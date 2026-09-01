@@ -16,7 +16,7 @@ type contextKey string
 
 const requestIDKey contextKey = "request-id"
 
-// RequestLogger assigns or propagates a safe request ID, exposes it in the
+// RequestLogger assigns or propagates a safe HTTP request ID, exposes it in the
 // response, and logs only method/path/status/duration/request ID. Query
 // strings and headers are intentionally excluded because they may contain
 // credentials or other user data.

@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"stick/internal/api/health"
-	"stick/internal/web/httpx"
+	"stick/internal/httpx"
 )
 
 type healthDB struct {

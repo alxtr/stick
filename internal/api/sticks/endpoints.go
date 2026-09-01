@@ -76,7 +76,7 @@ func (h *Handler) renameStick(w http.ResponseWriter, r *http.Request) {
 	if !httpx.DecodeJSON(w, r, &request) {
 		return
 	}
-	version, ok := h.expectedVersion(w, r, r.PathValue("id"))
+	version, ok := httpx.IfMatchVersion(w, r)
 	if !ok {
 		return
 	}
@@ -93,7 +93,7 @@ func (h *Handler) archiveStick(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, http.StatusForbidden, "forbidden")
 		return
 	}
-	version, ok := h.expectedVersion(w, r, r.PathValue("id"))
+	version, ok := httpx.IfMatchVersion(w, r)
 	if !ok {
 		return
 	}
@@ -110,7 +110,7 @@ func (h *Handler) unarchiveStick(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, http.StatusForbidden, "forbidden")
 		return
 	}
-	version, ok := h.expectedVersion(w, r, r.PathValue("id"))
+	version, ok := httpx.IfMatchVersion(w, r)
 	if !ok {
 		return
 	}
@@ -129,7 +129,7 @@ func (h *Handler) claimStick(w http.ResponseWriter, r *http.Request) {
 	if !httpx.DecodeJSON(w, r, &request) {
 		return
 	}
-	version, ok := h.expectedVersion(w, r, r.PathValue("id"))
+	version, ok := httpx.IfMatchVersion(w, r)
 	if !ok {
 		return
 	}
@@ -142,7 +142,7 @@ func (h *Handler) claimStick(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) releaseStick(w http.ResponseWriter, r *http.Request) {
-	version, ok := h.expectedVersion(w, r, r.PathValue("id"))
+	version, ok := httpx.IfMatchVersion(w, r)
 	if !ok {
 		return
 	}
@@ -163,8 +163,13 @@ func (h *Handler) history(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.SetETag(w, stick.Version)
-	limit, offset, ok := historyPagination(w, r)
-	if !ok {
+	limit, offset, err := httpx.ParsePagination(r, httpx.PaginationOptions{
+		DefaultLimit: defaultHistoryLimit,
+		MaxLimit:     maxHistoryLimit,
+		MaxOffset:    maxHistoryOffset,
+	})
+	if err != nil {
+		httpx.WriteError(w, http.StatusBadRequest, "invalid history pagination")
 		return
 	}
 	sessions, total, err := h.service.GetHistory(r.Context(), identity, id, limit, offset)

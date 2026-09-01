@@ -8,7 +8,7 @@ import (
 )
 
 func (h *Handler) subscribe(w http.ResponseWriter, r *http.Request) {
-	version, ok := h.expectedVersion(w, r, r.PathValue("id"))
+	version, ok := httpx.IfMatchVersion(w, r)
 	if !ok {
 		return
 	}
@@ -21,7 +21,7 @@ func (h *Handler) subscribe(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) unsubscribe(w http.ResponseWriter, r *http.Request) {
-	version, ok := h.expectedVersion(w, r, r.PathValue("id"))
+	version, ok := httpx.IfMatchVersion(w, r)
 	if !ok {
 		return
 	}

@@ -1,4 +1,4 @@
-package sticks
+package v1
 
 import (
 	"errors"

@@ -1,4 +1,4 @@
-package sticks_test
+package v1_test
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 	"testing"
 
 	"stick/internal/adapters/persistence/sqlite"
-	"stick/internal/api/sticks"
+	sticksv1 "stick/internal/api/sticks/v1"
 	"stick/internal/application"
 	domain "stick/internal/core"
 	"stick/internal/httpx"
@@ -36,7 +36,7 @@ func newTestHandler(t *testing.T) http.Handler {
 	t.Cleanup(func() { _ = store.Close() })
 	publicURL := "http://localhost:8080"
 	admin := domain.Identity{Sub: "admin", Name: "Admin", Email: "admin@example.com", EmailVerified: true}
-	handler := sticks.New(application.NewService(store), tokenValidator{
+	handler := sticksv1.New(application.NewService(store), tokenValidator{
 		"admin-token": admin,
 		"user-token":  {Sub: "user", Name: "User", Email: "user@example.com", EmailVerified: true},
 	}, []string{"admin@example.com"}, publicURL, true)
@@ -148,4 +148,4 @@ func TestAPIMapsAuthorizationAndValidationErrors(t *testing.T) {
 	}
 }
 
-var _ sticks.TokenValidator = tokenValidator{}
+var _ sticksv1.TokenValidator = tokenValidator{}

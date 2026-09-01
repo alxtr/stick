@@ -1,4 +1,4 @@
-package sticks
+package v1
 
 import (
 	"net/http"
@@ -61,7 +61,7 @@ func (h *Handler) createStick(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.SetETag(w, stick.Version)
-	w.Header().Set("Location", h.publicURL+apiPrefix+"/sticks/"+stick.ID)
+	w.Header().Set("Location", h.publicURL+"/api/v1/sticks/"+stick.ID)
 	httpx.WriteJSON(w, http.StatusCreated, stickToJSON(stick))
 }
 

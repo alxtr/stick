@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"stick/internal/api/health"
-	"stick/internal/api/sticks"
+	sticksv1 "stick/internal/api/sticks/v1"
 	"stick/internal/application"
 	"stick/internal/auth"
 	"stick/internal/httpx"
@@ -62,7 +62,7 @@ func newHandler(service *application.Service, readiness health.ReadinessChecker,
 
 	router := httpx.NewRouter(parsedPublicURL.Path)
 	healthHandler := health.New(readiness)
-	sticksHandler := sticks.New(service, auth.NewJWTValidator(options.JWT), options.AdminEmails, publicURL, options.NotificationsEnabled)
+	sticksHandler := sticksv1.New(service, auth.NewJWTValidator(options.JWT), options.AdminEmails, publicURL, options.NotificationsEnabled)
 
 	healthHandler.Register(router)
 	sticksHandler.Register(router)

@@ -1,5 +1,5 @@
-// Package sticks provides the authenticated Stick REST API route group.
-package sticks
+// Package v1 provides the authenticated Stick REST API route group.
+package v1
 
 import (
 	"context"
@@ -13,7 +13,6 @@ import (
 )
 
 const (
-	apiPrefix           = "/api/v1"
 	defaultHistoryLimit = 20
 	maxHistoryLimit     = 100
 	maxHistoryOffset    = 100_000
@@ -54,20 +53,20 @@ func New(
 // every route in this group.
 func (h *Handler) Register(router *httpx.Router) {
 	protected := router.With(h.authenticate)
-	protected.HandleFunc(http.MethodGet, apiPrefix+"/sticks", h.listSticks)
-	protected.HandleFunc(http.MethodPost, apiPrefix+"/sticks", h.createStick)
-	protected.HandleFunc(http.MethodGet, apiPrefix+"/sticks/archived", h.listArchivedSticks)
-	protected.HandleFunc(http.MethodGet, apiPrefix+"/sticks/{id}", h.getStick)
-	protected.HandleFunc(http.MethodPatch, apiPrefix+"/sticks/{id}", h.renameStick)
-	protected.HandleFunc(http.MethodGet, apiPrefix+"/sticks/{id}/history", h.history)
-	protected.HandleFunc(http.MethodPost, apiPrefix+"/sticks/{id}/claim", h.claimStick)
-	protected.HandleFunc(http.MethodPost, apiPrefix+"/sticks/{id}/release", h.releaseStick)
-	protected.HandleFunc(http.MethodPost, apiPrefix+"/sticks/{id}/archive", h.archiveStick)
-	protected.HandleFunc(http.MethodPost, apiPrefix+"/sticks/{id}/unarchive", h.unarchiveStick)
+	protected.HandleFunc(http.MethodGet, "/api/v1/sticks", h.listSticks)
+	protected.HandleFunc(http.MethodPost, "/api/v1/sticks", h.createStick)
+	protected.HandleFunc(http.MethodGet, "/api/v1/sticks/archived", h.listArchivedSticks)
+	protected.HandleFunc(http.MethodGet, "/api/v1/sticks/{id}", h.getStick)
+	protected.HandleFunc(http.MethodPatch, "/api/v1/sticks/{id}", h.renameStick)
+	protected.HandleFunc(http.MethodGet, "/api/v1/sticks/{id}/history", h.history)
+	protected.HandleFunc(http.MethodPost, "/api/v1/sticks/{id}/claim", h.claimStick)
+	protected.HandleFunc(http.MethodPost, "/api/v1/sticks/{id}/release", h.releaseStick)
+	protected.HandleFunc(http.MethodPost, "/api/v1/sticks/{id}/archive", h.archiveStick)
+	protected.HandleFunc(http.MethodPost, "/api/v1/sticks/{id}/unarchive", h.unarchiveStick)
 	if h.notificationsEnabled {
-		protected.HandleFunc(http.MethodPut, apiPrefix+"/sticks/{id}/subscription", h.subscribe)
-		protected.HandleFunc(http.MethodDelete, apiPrefix+"/sticks/{id}/subscription", h.unsubscribe)
-		protected.HandleFunc(http.MethodGet, apiPrefix+"/subscriptions", h.subscriptions)
+		protected.HandleFunc(http.MethodPut, "/api/v1/sticks/{id}/subscription", h.subscribe)
+		protected.HandleFunc(http.MethodDelete, "/api/v1/sticks/{id}/subscription", h.unsubscribe)
+		protected.HandleFunc(http.MethodGet, "/api/v1/subscriptions", h.subscriptions)
 	}
 }
 

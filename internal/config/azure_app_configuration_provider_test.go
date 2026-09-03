@@ -31,6 +31,22 @@ func (t testAzureTransport) Do(request *http.Request) (*http.Response, error) {
 	return t.transport.RoundTrip(request)
 }
 
+func azureTestOptions(transport http.RoundTripper) *azureappconfiguration.Options {
+	return &azureappconfiguration.Options{
+		ReplicaDiscoveryEnabled: boolPointer(false),
+		ClientOptions: &azappconfig.ClientOptions{
+			ClientOptions: azcore.ClientOptions{
+				Transport: testAzureTransport{transport: transport},
+				Retry:     policy.RetryOptions{MaxRetries: -1},
+			},
+		},
+	}
+}
+
+func boolPointer(value bool) *bool {
+	return &value
+}
+
 func TestAzureAppConfigurationProviderLoadsSettings(t *testing.T) {
 	settings := []map[string]any{
 		{"key": "stick/database", "value": "/tmp/azure.db", "label": "production"},
@@ -65,14 +81,7 @@ func TestAzureAppConfigurationProviderLoadsSettings(t *testing.T) {
 	}))
 	defer server.Close()
 
-	options := &azureappconfiguration.Options{
-		ClientOptions: &azappconfig.ClientOptions{
-			ClientOptions: azcore.ClientOptions{
-				Transport: testAzureTransport{transport: server.Client().Transport},
-				Retry:     policy.RetryOptions{MaxRetries: -1},
-			},
-		},
-	}
+	options := azureTestOptions(server.Client().Transport)
 	provider := AzureAppConfigurationProvider{
 		Endpoint:   server.URL,
 		Label:      "production",
@@ -121,10 +130,7 @@ func TestAzureAppConfigurationProviderUsesDefaultLabelAndFilter(t *testing.T) {
 	provider := AzureAppConfigurationProvider{
 		Endpoint:   server.URL,
 		Credential: testAzureCredential{},
-		Options: &azureappconfiguration.Options{ClientOptions: &azappconfig.ClientOptions{ClientOptions: azcore.ClientOptions{
-			Transport: testAzureTransport{transport: server.Client().Transport},
-			Retry:     policy.RetryOptions{MaxRetries: -1},
-		}}},
+		Options:    azureTestOptions(server.Client().Transport),
 	}
 	if _, err := Load(context.Background(), provider); err == nil || !strings.Contains(err.Error(), "missing required config") {
 		t.Fatalf("Load error = %v, want missing configuration", err)
@@ -154,10 +160,7 @@ func TestAzureAppConfigurationProviderSupportsCustomSeparator(t *testing.T) {
 		KeyPrefix:  "stick.",
 		Separator:  ".",
 		Credential: testAzureCredential{},
-		Options: &azureappconfiguration.Options{ClientOptions: &azappconfig.ClientOptions{ClientOptions: azcore.ClientOptions{
-			Transport: testAzureTransport{transport: server.Client().Transport},
-			Retry:     policy.RetryOptions{MaxRetries: -1},
-		}}},
+		Options:    azureTestOptions(server.Client().Transport),
 	}
 	config, err := Load(context.Background(), provider)
 	if err != nil {
@@ -189,10 +192,7 @@ func TestAzureAppConfigurationProviderSupportsEverySeparator(t *testing.T) {
 				KeyPrefix:  "stick",
 				Separator:  separator,
 				Credential: testAzureCredential{},
-				Options: &azureappconfiguration.Options{ClientOptions: &azappconfig.ClientOptions{ClientOptions: azcore.ClientOptions{
-					Transport: testAzureTransport{transport: server.Client().Transport},
-					Retry:     policy.RetryOptions{MaxRetries: -1},
-				}}},
+				Options:    azureTestOptions(server.Client().Transport),
 			}
 			var cfg Config
 			if err := provider.Apply(context.Background(), &cfg); err != nil {
@@ -244,10 +244,7 @@ func TestAzureAppConfigurationProviderRejectsUnknownKey(t *testing.T) {
 		Endpoint:   server.URL,
 		KeyPrefix:  "stick/",
 		Credential: testAzureCredential{},
-		Options: &azureappconfiguration.Options{ClientOptions: &azappconfig.ClientOptions{ClientOptions: azcore.ClientOptions{
-			Transport: testAzureTransport{transport: server.Client().Transport},
-			Retry:     policy.RetryOptions{MaxRetries: -1},
-		}}},
+		Options:    azureTestOptions(server.Client().Transport),
 	}
 	if _, err := Load(context.Background(), provider); err == nil || !strings.Contains(err.Error(), "field unknown not found") {
 		t.Fatalf("Load error = %v", err)

@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 	_ "time/tzdata"
@@ -46,6 +47,7 @@ func mainContext(parent context.Context, args []string) (err error) {
 	flags := flag.NewFlagSet("stickd", flag.ContinueOnError)
 	flags.SetOutput(os.Stderr)
 	configPath := flags.String("config", "", "path to config YAML file (default: config.yaml in working directory)")
+	configProviders := flags.String("config-providers", "", "comma-separated configuration providers (default: yaml,environment)")
 	if err := flags.Parse(args); err != nil {
 		return err
 	}
@@ -53,10 +55,11 @@ func mainContext(parent context.Context, args []string) (err error) {
 		return fmt.Errorf("unexpected positional arguments: %v", flags.Args())
 	}
 
-	cfg, err := config.Load(parent,
-		config.YAMLProvider{Path: *configPath},
-		config.EnvironmentProvider{},
-	)
+	providers, err := buildConfigProviders(*configPath, *configProviders)
+	if err != nil {
+		return fmt.Errorf("config: %w", err)
+	}
+	cfg, err := config.Load(parent, providers...)
 	if err != nil {
 		return fmt.Errorf("config: %w", err)
 	}
@@ -105,6 +108,48 @@ func mainContext(parent context.Context, args []string) (err error) {
 		}))
 	}
 	return application.Run(shutdown, components...)
+}
+
+const defaultConfigProviders = "yaml,environment"
+
+func buildConfigProviders(configPath, selection string) ([]config.Provider, error) {
+	selection = strings.TrimSpace(selection)
+	if selection == "" {
+		selection = strings.TrimSpace(os.Getenv("STICK_CONFIG_PROVIDERS"))
+	}
+	if selection == "" {
+		selection = defaultConfigProviders
+	}
+
+	var providers []config.Provider
+	hasYAML := false
+	for _, name := range strings.Split(selection, ",") {
+		name = strings.ToLower(strings.TrimSpace(name))
+		if name == "" {
+			return nil, fmt.Errorf("configuration provider list contains an empty provider name")
+		}
+		switch name {
+		case "yaml":
+			hasYAML = true
+			providers = append(providers, config.YAMLProvider{Path: configPath})
+		case "environment":
+			providers = append(providers, config.EnvironmentProvider{})
+		case "azure-app-config":
+			providers = append(providers, config.AzureAppConfigurationProvider{
+				Endpoint:  os.Getenv("STICK_AZURE_APPCONFIG_ENDPOINT"),
+				Label:     os.Getenv("STICK_AZURE_APPCONFIG_LABEL"),
+				KeyPrefix: os.Getenv("STICK_AZURE_APPCONFIG_KEY_PREFIX"),
+				KeyFilter: os.Getenv("STICK_AZURE_APPCONFIG_KEY_FILTER"),
+				Separator: os.Getenv("STICK_AZURE_APPCONFIG_SEPARATOR"),
+			})
+		default:
+			return nil, fmt.Errorf("unknown configuration provider %q", name)
+		}
+	}
+	if configPath != "" && !hasYAML {
+		return nil, fmt.Errorf("-config requires the yaml configuration provider")
+	}
+	return providers, nil
 }
 
 type backend interface {

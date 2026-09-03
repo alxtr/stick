@@ -39,17 +39,8 @@ func (p YAMLProvider) Apply(ctx context.Context, config *Config) error {
 		return err
 	}
 
-	source := yamlConfig{}
-	decoder := yaml.NewDecoder(bytes.NewReader(data))
-	decoder.KnownFields(true)
-	if err := decoder.Decode(&source); err != nil {
-		return fmt.Errorf("parsing config file %q: %w", filePath, err)
-	}
-	var trailing any
-	if err := decoder.Decode(&trailing); err != io.EOF {
-		if err == nil {
-			err = fmt.Errorf("multiple YAML documents are not supported")
-		}
+	source, err := decodeYAMLConfig(data)
+	if err != nil {
 		return fmt.Errorf("parsing config file %q: %w", filePath, err)
 	}
 
@@ -61,35 +52,52 @@ func (p YAMLProvider) Apply(ctx context.Context, config *Config) error {
 	return nil
 }
 
+func decodeYAMLConfig(data []byte) (yamlConfig, error) {
+	source := yamlConfig{}
+	decoder := yaml.NewDecoder(bytes.NewReader(data))
+	decoder.KnownFields(true)
+	if err := decoder.Decode(&source); err != nil {
+		return yamlConfig{}, err
+	}
+	var trailing any
+	if err := decoder.Decode(&trailing); err != io.EOF {
+		if err == nil {
+			err = fmt.Errorf("multiple YAML documents are not supported")
+		}
+		return yamlConfig{}, err
+	}
+	return source, nil
+}
+
 type yamlConfig struct {
-	Server        yamlServerConfig        `yaml:"server"`
-	Database      *string                 `yaml:"database"`
-	Auth          yamlAuthConfig          `yaml:"auth"`
-	Timezone      *string                 `yaml:"timezone"`
-	Notifications yamlNotificationsConfig `yaml:"notifications"`
+	Server        yamlServerConfig        `yaml:"server" json:"server"`
+	Database      *string                 `yaml:"database" json:"database"`
+	Auth          yamlAuthConfig          `yaml:"auth" json:"auth"`
+	Timezone      *string                 `yaml:"timezone" json:"timezone"`
+	Notifications yamlNotificationsConfig `yaml:"notifications" json:"notifications"`
 }
 
 type yamlServerConfig struct {
-	PublicURL  *string `yaml:"public_url"`
-	ListenAddr *string `yaml:"listen_addr"`
+	PublicURL  *string `yaml:"public_url" json:"public_url"`
+	ListenAddr *string `yaml:"listen_addr" json:"listen_addr"`
 }
 
 type yamlAuthConfig struct {
-	OIDC          yamlOIDCConfig `yaml:"oidc"`
-	SessionSecret *string        `yaml:"session_secret"`
-	AdminEmails   *[]string      `yaml:"admin_emails"`
+	OIDC          yamlOIDCConfig `yaml:"oidc" json:"oidc"`
+	SessionSecret *string        `yaml:"session_secret" json:"session_secret"`
+	AdminEmails   *[]string      `yaml:"admin_emails" json:"admin_emails"`
 }
 
 type yamlOIDCConfig struct {
-	Issuer       *string `yaml:"issuer"`
-	ClientID     *string `yaml:"client_id"`
-	ClientSecret *string `yaml:"client_secret"`
+	Issuer       *string `yaml:"issuer" json:"issuer"`
+	ClientID     *string `yaml:"client_id" json:"client_id"`
+	ClientSecret *string `yaml:"client_secret" json:"client_secret"`
 }
 
 type yamlNotificationsConfig struct {
-	SMTP    yamlSMTPConfigs    `yaml:"smtp"`
-	Webhook yamlWebhookConfigs `yaml:"webhook"`
-	Teams   yamlTeamsConfigs   `yaml:"teams"`
+	SMTP    yamlSMTPConfigs    `yaml:"smtp" json:"smtp"`
+	Webhook yamlWebhookConfigs `yaml:"webhook" json:"webhook"`
+	Teams   yamlTeamsConfigs   `yaml:"teams" json:"teams"`
 }
 
 type yamlSMTPConfigs []*yamlSMTPConfig
@@ -97,22 +105,22 @@ type yamlWebhookConfigs []*yamlWebhookConfig
 type yamlTeamsConfigs []*yamlTeamsConfig
 
 type yamlSMTPConfig struct {
-	Host     string `yaml:"host"`
-	Port     int    `yaml:"port"`
-	TLSMode  string `yaml:"tls_mode"`
-	Username string `yaml:"username"`
-	Password string `yaml:"password"`
-	From     string `yaml:"from"`
-	Subject  string `yaml:"subject"`
-	Body     string `yaml:"body"`
+	Host     string `yaml:"host" json:"host"`
+	Port     int    `yaml:"port" json:"port"`
+	TLSMode  string `yaml:"tls_mode" json:"tls_mode"`
+	Username string `yaml:"username" json:"username"`
+	Password string `yaml:"password" json:"password"`
+	From     string `yaml:"from" json:"from"`
+	Subject  string `yaml:"subject" json:"subject"`
+	Body     string `yaml:"body" json:"body"`
 }
 
 type yamlWebhookConfig struct {
-	URL string `yaml:"url"`
+	URL string `yaml:"url" json:"url"`
 }
 
 type yamlTeamsConfig struct {
-	URL string `yaml:"url"`
+	URL string `yaml:"url" json:"url"`
 }
 
 func applyYAMLConfig(source yamlConfig, config *Config) error {

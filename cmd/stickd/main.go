@@ -53,7 +53,10 @@ func mainContext(parent context.Context, args []string) (err error) {
 		return fmt.Errorf("unexpected positional arguments: %v", flags.Args())
 	}
 
-	cfg, err := config.Load(*configPath)
+	cfg, err := config.Load(parent,
+		config.YAMLProvider{Path: *configPath},
+		config.EnvironmentProvider{},
+	)
 	if err != nil {
 		return fmt.Errorf("config: %w", err)
 	}

@@ -1,49 +1,21 @@
 package config
 
 import (
-	"bytes"
+	"context"
 	"fmt"
-	"io"
 	"os"
 	"strconv"
 	"strings"
-
-	"gopkg.in/yaml.v3"
 )
 
-// Load reads configuration from YAML and applies non-empty STICK_* environment
-// variable overrides. If path is empty, config.yaml in the working directory
-// is optional and environment variables may provide the complete config.
-func Load(path string) (Config, error) {
+// Load applies providers in order and normalizes the resulting configuration.
+// Later providers override values supplied by earlier providers.
+func Load(ctx context.Context, providers ...Provider) (Config, error) {
 	raw := rawConfig{}
-
-	filePath := path
-	if filePath == "" {
-		filePath = "config.yaml"
-	}
-
-	data, err := os.ReadFile(filePath)
-	if err != nil {
-		if !os.IsNotExist(err) || path != "" {
-			return Config{}, fmt.Errorf("reading config file %q: %w", filePath, err)
+	for _, provider := range providers {
+		if err := provider.Apply(ctx, &raw); err != nil {
+			return Config{}, fmt.Errorf("%T: %w", provider, err)
 		}
-	} else {
-		decoder := yaml.NewDecoder(bytes.NewReader(data))
-		decoder.KnownFields(true)
-		if err := decoder.Decode(&raw); err != nil {
-			return Config{}, fmt.Errorf("parsing config file %q: %w", filePath, err)
-		}
-		var trailing any
-		if err := decoder.Decode(&trailing); err != io.EOF {
-			if err == nil {
-				err = fmt.Errorf("multiple YAML documents are not supported")
-			}
-			return Config{}, fmt.Errorf("parsing config file %q: %w", filePath, err)
-		}
-	}
-
-	if err := applyEnvOverrides(&raw); err != nil {
-		return Config{}, err
 	}
 	return normalize(raw)
 }

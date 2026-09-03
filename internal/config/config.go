@@ -74,9 +74,9 @@ type Config struct {
 	Notifications NotificationsConfig
 }
 
-// rawConfig and its nested types are the YAML representation. Keeping these
-// separate from Config prevents unvalidated source values from escaping the
-// configuration boundary.
+// rawConfig and its nested types are the accumulated provider representation.
+// Keeping these separate from Config prevents unvalidated source values from
+// escaping the configuration boundary.
 type rawConfig struct {
 	Server        rawServerConfig        `yaml:"server"`
 	Database      string                 `yaml:"database"`

@@ -65,64 +65,13 @@ type NotificationsConfig struct {
 	Teams   []*TeamsConfig
 }
 
-// Config is the normalized application configuration.
+// Config is the normalized application configuration returned by Load.
+// Providers populate a Config value before Load applies final defaults and
+// validation.
 type Config struct {
 	Server        ServerConfig
 	Database      DatabaseConfig
 	Auth          AuthConfig
 	Timezone      *time.Location
 	Notifications NotificationsConfig
-}
-
-// rawConfig and its nested types are the accumulated provider representation.
-// Keeping these separate from Config prevents unvalidated source values from
-// escaping the configuration boundary.
-type rawConfig struct {
-	Server        rawServerConfig        `yaml:"server"`
-	Database      string                 `yaml:"database"`
-	Auth          rawAuthConfig          `yaml:"auth"`
-	Timezone      string                 `yaml:"timezone"`
-	Notifications rawNotificationsConfig `yaml:"notifications"`
-}
-
-type rawServerConfig struct {
-	PublicURL  string `yaml:"public_url"`
-	ListenAddr string `yaml:"listen_addr"`
-}
-
-type rawAuthConfig struct {
-	OIDC          rawOIDCConfig `yaml:"oidc"`
-	SessionSecret string        `yaml:"session_secret"`
-	AdminEmails   []string      `yaml:"admin_emails"`
-}
-
-type rawOIDCConfig struct {
-	Issuer       string `yaml:"issuer"`
-	ClientID     string `yaml:"client_id"`
-	ClientSecret string `yaml:"client_secret"`
-}
-
-type rawNotificationsConfig struct {
-	SMTP    rawSMTPConfigs    `yaml:"smtp"`
-	Webhook rawWebhookConfigs `yaml:"webhook"`
-	Teams   rawTeamsConfigs   `yaml:"teams"`
-}
-
-type rawSMTPConfig struct {
-	Host     string `yaml:"host"`
-	Port     int    `yaml:"port"`
-	TLSMode  string `yaml:"tls_mode"`
-	Username string `yaml:"username"`
-	Password string `yaml:"password"`
-	From     string `yaml:"from"`
-	Subject  string `yaml:"subject"`
-	Body     string `yaml:"body"`
-}
-
-type rawWebhookConfig struct {
-	URL string `yaml:"url"`
-}
-
-type rawTeamsConfig struct {
-	URL string `yaml:"url"`
 }

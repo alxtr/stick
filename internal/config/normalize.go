@@ -7,96 +7,81 @@ import (
 	"strings"
 	"time"
 
-	"stick/internal/auth"
 	"stick/internal/netutil"
 	"stick/internal/publicurl"
 )
 
 const minSessionSecretBytes = 32
 
-func normalize(raw rawConfig) (Config, error) {
-	if err := validateRequired(raw); err != nil {
-		return Config{}, err
+func normalize(config Config) (Config, error) {
+	config.Server.ListenAddr = strings.TrimSpace(config.Server.ListenAddr)
+	if config.Server.ListenAddr == "" {
+		config.Server.ListenAddr = ":8080"
 	}
-	database, err := normalizeDatabase(raw.Database)
+	if config.Timezone == nil {
+		config.Timezone = time.UTC
+	}
+	config.Auth.SessionSecret = []byte(strings.TrimSpace(string(config.Auth.SessionSecret)))
+
+	notifications, err := normalizeNotifications(config.Notifications)
 	if err != nil {
 		return Config{}, err
 	}
-	publicURL, err := publicurl.Parse(raw.Server.PublicURL)
+	config.Notifications = notifications
+
+	if err := validateRequired(config); err != nil {
+		return Config{}, err
+	}
+	if err := validateDatabase(config.Database); err != nil {
+		return Config{}, err
+	}
+	if !config.Server.PublicURL.IsHTTPS() && !config.Server.PublicURL.IsLoopback() {
+		return Config{}, fmt.Errorf("invalid server.public_url %q: HTTPS is required for non-local addresses", config.Server.PublicURL)
+	}
+	issuer, err := parseHTTPURL("auth.oidc.issuer", config.Auth.OIDC.Issuer)
 	if err != nil {
 		return Config{}, err
 	}
-	if !publicURL.IsHTTPS() && !publicURL.IsLoopback() {
-		return Config{}, fmt.Errorf("invalid server.public_url %q: HTTPS is required for non-local addresses", raw.Server.PublicURL)
+	if issuer.RawQuery != "" || issuer.Fragment != "" {
+		return Config{}, fmt.Errorf("invalid auth.oidc.issuer %q: must not include a query or fragment", config.Auth.OIDC.Issuer)
 	}
-
-	listenAddr := strings.TrimSpace(raw.Server.ListenAddr)
-	if listenAddr == "" {
-		listenAddr = ":8080"
-	}
-
-	location := time.UTC
-	if raw.Timezone != "" {
-		location, err = time.LoadLocation(raw.Timezone)
-		if err != nil {
-			return Config{}, fmt.Errorf("invalid timezone %q: %w", raw.Timezone, err)
-		}
-	}
-
-	notifications, err := normalizeNotifications(raw.Notifications)
-	if err != nil {
+	if err := validateSessionSecret(config.Auth.SessionSecret); err != nil {
 		return Config{}, err
 	}
-	return Config{
-		Server: ServerConfig{
-			PublicURL:  publicURL,
-			ListenAddr: listenAddr,
-		},
-		Database: database,
-		Auth: AuthConfig{
-			OIDC: auth.OIDCConfig{
-				Issuer:       raw.Auth.OIDC.Issuer,
-				ClientID:     raw.Auth.OIDC.ClientID,
-				ClientSecret: raw.Auth.OIDC.ClientSecret,
-			},
-			SessionSecret: []byte(strings.TrimSpace(raw.Auth.SessionSecret)),
-			AdminEmails:   append([]string(nil), raw.Auth.AdminEmails...),
-		},
-		Timezone:      location,
-		Notifications: notifications,
-	}, nil
+
+	config.Auth.AdminEmails = append([]string(nil), config.Auth.AdminEmails...)
+	return config, nil
 }
 
-func validateRequired(raw rawConfig) error {
-	required := map[string]string{
-		"database":                raw.Database,
-		"server.public_url":       raw.Server.PublicURL,
-		"auth.oidc.issuer":        raw.Auth.OIDC.Issuer,
-		"auth.oidc.client_id":     raw.Auth.OIDC.ClientID,
-		"auth.oidc.client_secret": raw.Auth.OIDC.ClientSecret,
-		"auth.session_secret":     raw.Auth.SessionSecret,
+func validateRequired(config Config) error {
+	required := map[string]bool{
+		"database":                strings.TrimSpace(config.Database.DSN) != "",
+		"server.public_url":       config.Server.PublicURL.Validate() == nil,
+		"auth.oidc.issuer":        strings.TrimSpace(config.Auth.OIDC.Issuer) != "",
+		"auth.oidc.client_id":     strings.TrimSpace(config.Auth.OIDC.ClientID) != "",
+		"auth.oidc.client_secret": strings.TrimSpace(config.Auth.OIDC.ClientSecret) != "",
+		"auth.session_secret":     len(config.Auth.SessionSecret) > 0,
 	}
 	var missing []string
-	for key, value := range required {
-		if strings.TrimSpace(value) == "" {
-			missing = append(missing, key)
+	for field, present := range required {
+		if !present {
+			missing = append(missing, field)
 		}
 	}
 	if len(missing) > 0 {
 		sort.Strings(missing)
 		return fmt.Errorf("missing required config: %v", missing)
 	}
-	if err := validateSessionSecret(raw.Auth.SessionSecret); err != nil {
-		return err
-	}
-	issuer, err := parseHTTPURL("auth.oidc.issuer", raw.Auth.OIDC.Issuer)
-	if err != nil {
-		return err
-	}
-	if issuer.RawQuery != "" || issuer.Fragment != "" {
-		return fmt.Errorf("invalid auth.oidc.issuer %q: must not include a query or fragment", raw.Auth.OIDC.Issuer)
-	}
 	return nil
+}
+
+func validateDatabase(config DatabaseConfig) error {
+	switch config.Driver {
+	case DatabaseDriverSQLite, DatabaseDriverPostgres, DatabaseDriverMongoDB:
+		return nil
+	default:
+		return fmt.Errorf("unsupported database driver %q", config.Driver)
+	}
 }
 
 func normalizeDatabase(value string) (DatabaseConfig, error) {
@@ -117,21 +102,21 @@ func normalizeDatabase(value string) (DatabaseConfig, error) {
 	}
 }
 
-func normalizeNotifications(raw rawNotificationsConfig) (NotificationsConfig, error) {
+func normalizeNotifications(config NotificationsConfig) (NotificationsConfig, error) {
 	result := NotificationsConfig{}
-	for _, smtp := range raw.SMTP {
+	for _, smtp := range config.SMTP {
 		if smtp == nil {
 			return NotificationsConfig{}, fmt.Errorf("notifications.smtp entries must be mappings")
 		}
 		result.SMTP = append(result.SMTP, normalizeSMTP(smtp))
 	}
-	for _, webhook := range raw.Webhook {
+	for _, webhook := range config.Webhook {
 		if webhook == nil {
 			return NotificationsConfig{}, fmt.Errorf("notifications.webhook entries must be mappings")
 		}
 		result.Webhook = append(result.Webhook, &WebhookConfig{URL: strings.TrimSpace(webhook.URL)})
 	}
-	for _, teams := range raw.Teams {
+	for _, teams := range config.Teams {
 		if teams == nil {
 			return NotificationsConfig{}, fmt.Errorf("notifications.teams entries must be mappings")
 		}
@@ -140,17 +125,12 @@ func normalizeNotifications(raw rawNotificationsConfig) (NotificationsConfig, er
 	return result, nil
 }
 
-func normalizeSMTP(raw *rawSMTPConfig) *SMTPConfig {
-	return &SMTPConfig{
-		Host:     strings.TrimSpace(raw.Host),
-		Port:     raw.Port,
-		TLSMode:  strings.ToLower(strings.TrimSpace(raw.TLSMode)),
-		Username: raw.Username,
-		Password: raw.Password,
-		From:     strings.TrimSpace(raw.From),
-		Subject:  raw.Subject,
-		Body:     raw.Body,
-	}
+func normalizeSMTP(config *SMTPConfig) *SMTPConfig {
+	result := *config
+	result.Host = strings.TrimSpace(result.Host)
+	result.TLSMode = strings.ToLower(strings.TrimSpace(result.TLSMode))
+	result.From = strings.TrimSpace(result.From)
+	return &result
 }
 
 func parseHTTPURL(name, value string) (*url.URL, error) {
@@ -170,10 +150,40 @@ func parseHTTPURL(name, value string) (*url.URL, error) {
 	return parsed, nil
 }
 
-func validateSessionSecret(secret string) error {
-	secret = strings.TrimSpace(secret)
-	if len([]byte(secret)) < minSessionSecretBytes {
+func validateSessionSecret(secret []byte) error {
+	if len(secret) < minSessionSecretBytes {
 		return fmt.Errorf("auth.session_secret must be at least %d bytes", minSessionSecretBytes)
 	}
 	return nil
+}
+
+func setDatabase(config *Config, value string) error {
+	database, err := normalizeDatabase(value)
+	if err != nil {
+		return err
+	}
+	config.Database = database
+	return nil
+}
+
+func setPublicURL(config *Config, value string) error {
+	publicURL, err := publicurl.Parse(value)
+	if err != nil {
+		return err
+	}
+	config.Server.PublicURL = publicURL
+	return nil
+}
+
+func setTimezone(config *Config, value string) error {
+	location, err := time.LoadLocation(value)
+	if err != nil {
+		return fmt.Errorf("invalid timezone %q: %w", value, err)
+	}
+	config.Timezone = location
+	return nil
+}
+
+func setSessionSecret(config *Config, value string) {
+	config.Auth.SessionSecret = []byte(strings.TrimSpace(value))
 }

@@ -334,7 +334,7 @@ timezone: Not/ATimezone
 func TestLoad_RejectsShortSessionSecret(t *testing.T) {
 	setRequiredEnv(t)
 	t.Setenv("STICK_AUTH_SESSION_SECRET", "too-short")
-	if _, err := config.Load(context.Background(), config.YAMLProvider{}, config.EnvironmentProvider{}); err == nil || !strings.Contains(err.Error(), "SESSION_SECRET") {
+	if _, err := config.Load(context.Background(), config.YAMLProvider{}, config.EnvironmentProvider{}); err == nil || !strings.Contains(err.Error(), "auth.session_secret") {
 		t.Fatalf("Load error = %v", err)
 	}
 }
@@ -387,8 +387,12 @@ func TestLoad_ExplicitPathNotFound(t *testing.T) {
 
 func TestLoad_MissingRequired(t *testing.T) {
 	clearConfigEnv(t)
-	if _, err := loadFromEnvWithoutRequired(t); err == nil || !strings.Contains(err.Error(), "missing required config") {
+	_, err := loadFromEnvWithoutRequired(t)
+	if err == nil || !strings.Contains(err.Error(), "missing required config") {
 		t.Fatalf("Load error = %v", err)
+	}
+	if strings.Contains(err.Error(), "STICK_") {
+		t.Fatalf("Load error exposes provider-specific names: %v", err)
 	}
 }
 

@@ -27,7 +27,7 @@ func normalize(raw rawConfig) (Config, error) {
 		return Config{}, err
 	}
 	if !publicURL.IsHTTPS() && !publicURL.IsLoopback() {
-		return Config{}, fmt.Errorf("invalid PUBLIC_URL %q: HTTPS is required for non-local addresses", raw.Server.PublicURL)
+		return Config{}, fmt.Errorf("invalid server.public_url %q: HTTPS is required for non-local addresses", raw.Server.PublicURL)
 	}
 
 	listenAddr := strings.TrimSpace(raw.Server.ListenAddr)
@@ -69,12 +69,12 @@ func normalize(raw rawConfig) (Config, error) {
 
 func validateRequired(raw rawConfig) error {
 	required := map[string]string{
-		"STICK_DATABASE":                raw.Database,
-		"STICK_SERVER_PUBLIC_URL":       raw.Server.PublicURL,
-		"STICK_AUTH_OIDC_ISSUER":        raw.Auth.OIDC.Issuer,
-		"STICK_AUTH_OIDC_CLIENT_ID":     raw.Auth.OIDC.ClientID,
-		"STICK_AUTH_OIDC_CLIENT_SECRET": raw.Auth.OIDC.ClientSecret,
-		"STICK_AUTH_SESSION_SECRET":     raw.Auth.SessionSecret,
+		"database":                raw.Database,
+		"server.public_url":       raw.Server.PublicURL,
+		"auth.oidc.issuer":        raw.Auth.OIDC.Issuer,
+		"auth.oidc.client_id":     raw.Auth.OIDC.ClientID,
+		"auth.oidc.client_secret": raw.Auth.OIDC.ClientSecret,
+		"auth.session_secret":     raw.Auth.SessionSecret,
 	}
 	var missing []string
 	for key, value := range required {
@@ -89,12 +89,12 @@ func validateRequired(raw rawConfig) error {
 	if err := validateSessionSecret(raw.Auth.SessionSecret); err != nil {
 		return err
 	}
-	issuer, err := parseHTTPURL("STICK_AUTH_OIDC_ISSUER", raw.Auth.OIDC.Issuer)
+	issuer, err := parseHTTPURL("auth.oidc.issuer", raw.Auth.OIDC.Issuer)
 	if err != nil {
 		return err
 	}
 	if issuer.RawQuery != "" || issuer.Fragment != "" {
-		return fmt.Errorf("invalid STICK_AUTH_OIDC_ISSUER %q: must not include a query or fragment", raw.Auth.OIDC.Issuer)
+		return fmt.Errorf("invalid auth.oidc.issuer %q: must not include a query or fragment", raw.Auth.OIDC.Issuer)
 	}
 	return nil
 }
@@ -173,7 +173,7 @@ func parseHTTPURL(name, value string) (*url.URL, error) {
 func validateSessionSecret(secret string) error {
 	secret = strings.TrimSpace(secret)
 	if len([]byte(secret)) < minSessionSecretBytes {
-		return fmt.Errorf("STICK_AUTH_SESSION_SECRET must be at least %d bytes", minSessionSecretBytes)
+		return fmt.Errorf("auth.session_secret must be at least %d bytes", minSessionSecretBytes)
 	}
 	return nil
 }

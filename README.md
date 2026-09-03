@@ -80,10 +80,45 @@ install -d -m 0700 local-data
 STICK_DATABASE="$PWD/local-data/stick.db" ./stickd -config config.yaml
 ```
 
-- Configuration can be provided in YAML, environment variables, or both.
-- Non-empty `STICK_*` variables override YAML values. 
+- Configuration can be provided in YAML, environment variables, Azure App
+  Configuration, or a combination of providers.
+- Non-empty `STICK_*` variables override values from earlier providers.
 
 See `.env.example` and `example.config.yaml` for the available settings.
+
+### Azure App Configuration
+
+Stick can also load configuration from Azure App Configuration. Select it with
+the bootstrap setting below; `environment` remains last so ordinary `STICK_*`
+overrides retain precedence:
+
+```sh
+STICK_CONFIG_PROVIDERS=azure-app-config,environment
+STICK_AZURE_APPCONFIG_ENDPOINT=https://stick-prod.azconfig.io
+STICK_AZURE_APPCONFIG_LABEL=production
+STICK_AZURE_APPCONFIG_KEY_PREFIX=stick/
+STICK_AZURE_APPCONFIG_SEPARATOR=/
+```
+
+When Azure is the only structured source, omit `-config`; when combining it
+with a file, use `STICK_CONFIG_PROVIDERS=yaml,azure-app-config,environment`.
+
+Use slash-separated keys such as `stick/database`,
+`stick/server/public_url`, and `stick/auth/oidc/issuer`. Notification lists
+should be stored as JSON values with the `application/json` content type.
+The hierarchy separator is configurable (supported values include `/`, `.`,
+`:` and `__`) and defaults to `/`.
+Empty labels select unlabeled settings. Azure App Configuration Key Vault
+references are resolved automatically when the identity can read the referenced
+secrets.
+
+Authentication uses Azure's default credential chain. In production, prefer a
+managed identity or workload identity and grant it the **App Configuration Data
+Reader** role (and **Key Vault Secrets User** when Key Vault references are
+used). No Azure credentials are stored in the Stick configuration.
+
+The provider loads a snapshot during startup. Configuration changes require a
+Stick restart.
 
 If you use MongoDB, it must be deployed as a replica set because Stick uses multi-document transactions.
 

@@ -61,6 +61,75 @@ func TestMainContextLogsBuildMetadata(t *testing.T) {
 	}
 }
 
+func TestBuildConfigProvidersDefaultsToYAMLThenEnvironment(t *testing.T) {
+	t.Setenv("STICK_CONFIG_PROVIDERS", "")
+	providers, err := buildConfigProviders("", "")
+	if err != nil {
+		t.Fatalf("buildConfigProviders: %v", err)
+	}
+	if len(providers) != 2 {
+		t.Fatalf("providers = %d, want 2", len(providers))
+	}
+	if _, ok := providers[0].(config.YAMLProvider); !ok {
+		t.Errorf("providers[0] = %T, want YAMLProvider", providers[0])
+	}
+	if _, ok := providers[1].(config.EnvironmentProvider); !ok {
+		t.Errorf("providers[1] = %T, want EnvironmentProvider", providers[1])
+	}
+}
+
+func TestBuildConfigProvidersReadsSelectionFromEnvironment(t *testing.T) {
+	t.Setenv("STICK_CONFIG_PROVIDERS", "environment, azure-app-config")
+	t.Setenv("STICK_AZURE_APPCONFIG_ENDPOINT", "https://stick.azconfig.io")
+	t.Setenv("STICK_AZURE_APPCONFIG_SEPARATOR", ".")
+	providers, err := buildConfigProviders("", "")
+	if err != nil {
+		t.Fatalf("buildConfigProviders: %v", err)
+	}
+	if len(providers) != 2 {
+		t.Fatalf("providers = %d, want 2", len(providers))
+	}
+	if _, ok := providers[0].(config.EnvironmentProvider); !ok {
+		t.Errorf("providers[0] = %T, want EnvironmentProvider", providers[0])
+	}
+	azure, ok := providers[1].(config.AzureAppConfigurationProvider)
+	if !ok {
+		t.Fatalf("providers[1] = %T, want AzureAppConfigurationProvider", providers[1])
+	}
+	if azure.Endpoint != "https://stick.azconfig.io" {
+		t.Errorf("Azure endpoint = %q", azure.Endpoint)
+	}
+	if azure.Separator != "." {
+		t.Errorf("Azure separator = %q", azure.Separator)
+	}
+}
+
+func TestBuildConfigProvidersCLISelectionOverridesEnvironment(t *testing.T) {
+	t.Setenv("STICK_CONFIG_PROVIDERS", "azure-app-config")
+	providers, err := buildConfigProviders("", "environment")
+	if err != nil {
+		t.Fatalf("buildConfigProviders: %v", err)
+	}
+	if len(providers) != 1 {
+		t.Fatalf("providers = %d, want 1", len(providers))
+	}
+	if _, ok := providers[0].(config.EnvironmentProvider); !ok {
+		t.Errorf("provider = %T, want EnvironmentProvider", providers[0])
+	}
+}
+
+func TestBuildConfigProvidersRequiresYAMLForExplicitConfigPath(t *testing.T) {
+	if _, err := buildConfigProviders("/etc/stick/config.yaml", "environment"); err == nil || !strings.Contains(err.Error(), "requires the yaml") {
+		t.Fatalf("buildConfigProviders error = %v", err)
+	}
+}
+
+func TestBuildConfigProvidersRejectsUnknownProvider(t *testing.T) {
+	if _, err := buildConfigProviders("", "unknown"); err == nil || !strings.Contains(err.Error(), "unknown configuration provider") {
+		t.Fatalf("buildConfigProviders error = %v", err)
+	}
+}
+
 func setMinimalRuntimeEnv(t *testing.T, databasePath string) {
 	t.Helper()
 	t.Setenv("STICK_DATABASE", databasePath)

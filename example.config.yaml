@@ -1,6 +1,7 @@
 # Stick configuration
 # Copy this file to config.yaml and replace the required values.
-# Non-empty STICK_* environment variables override values in this file.
+# Non-empty STICK_* environment variables override values from earlier
+# providers. The provider chain itself is selected with STICK_CONFIG_PROVIDERS.
 # The OIDC callback URL is <server.public_url>/auth/callback.
 
 # Required: a filesystem path selects SQLite; a postgres://, postgresql://,
@@ -35,7 +36,9 @@ auth:
 # Timezone for displaying notification timestamps (default: UTC).
 # timezone: Europe/London
 
-# Notifications are optional. Configure any combination of backends.
+# Notifications are optional. Configure any combination of backends. When using
+# Azure App Configuration, list values should use the application/json content
+# type (for example, notifications/webhook).
 # Webhook URLs must use HTTPS except for loopback addresses used locally.
 # Each backend can be a mapping for one instance or a list for multiple
 # instances of the same type.

@@ -77,7 +77,6 @@ func TestAzureAppConfigurationProviderLoadsSettings(t *testing.T) {
 		Endpoint:   server.URL,
 		Label:      "production",
 		KeyPrefix:  "stick/",
-		Separator:  "/",
 		Credential: testAzureCredential{},
 		Options:    options,
 	}
@@ -166,6 +165,43 @@ func TestAzureAppConfigurationProviderSupportsCustomSeparator(t *testing.T) {
 	}
 	if config.Database.DSN != "/tmp/azure-dot.db" || config.Database.Driver != DatabaseDriverSQLite {
 		t.Fatalf("database = %+v", config.Database)
+	}
+}
+
+func TestAzureAppConfigurationProviderSupportsEverySeparator(t *testing.T) {
+	for _, separator := range []string{".", ",", ";", "-", "_", "__", "/", ":"} {
+		t.Run(separator, func(t *testing.T) {
+			prefix := "stick" + separator
+			server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if got, want := r.URL.Query().Get("key"), prefix+"*"; got != want {
+					t.Errorf("key filter = %q, want %q", got, want)
+				}
+				w.Header().Set("Sync-Token", "id=value;sn=1")
+				_ = json.NewEncoder(w).Encode(map[string]any{"items": []map[string]string{{
+					"key":   prefix + "database",
+					"value": "/tmp/azure-" + separator + ".db",
+				}}})
+			}))
+			defer server.Close()
+
+			provider := AzureAppConfigurationProvider{
+				Endpoint:   server.URL,
+				KeyPrefix:  "stick",
+				Separator:  separator,
+				Credential: testAzureCredential{},
+				Options: &azureappconfiguration.Options{ClientOptions: &azappconfig.ClientOptions{ClientOptions: azcore.ClientOptions{
+					Transport: testAzureTransport{transport: server.Client().Transport},
+					Retry:     policy.RetryOptions{MaxRetries: -1},
+				}}},
+			}
+			var cfg Config
+			if err := provider.Apply(context.Background(), &cfg); err != nil {
+				t.Fatalf("Apply: %v", err)
+			}
+			if got, want := cfg.Database.DSN, "/tmp/azure-"+separator+".db"; got != want {
+				t.Errorf("database = %q, want %q", got, want)
+			}
+		})
 	}
 }
 

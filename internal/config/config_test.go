@@ -1,6 +1,7 @@
 package config_test
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -63,7 +64,7 @@ func loadFromEnv(t *testing.T) config.Config {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = os.Chdir(original) })
-	cfg, err := config.Load("")
+	cfg, err := config.Load(context.Background(), config.YAMLProvider{}, config.EnvironmentProvider{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -145,7 +146,7 @@ auth:
 timezone: America/New_York
 `)
 
-	cfg, err := config.Load(path)
+	cfg, err := config.Load(context.Background(), config.YAMLProvider{Path: path}, config.EnvironmentProvider{})
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
@@ -181,7 +182,7 @@ auth:
 	t.Setenv("STICK_SERVER_PUBLIC_URL", "https://env.example.com/stick/")
 	t.Setenv("STICK_AUTH_ADMIN_EMAILS", " Alice@Example.com, bob@example.com ")
 
-	cfg, err := config.Load(path)
+	cfg, err := config.Load(context.Background(), config.YAMLProvider{Path: path}, config.EnvironmentProvider{})
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
@@ -193,6 +194,42 @@ auth:
 	}
 	if got := cfg.Auth.AdminEmails; len(got) != 2 || got[0] != " Alice@Example.com" || got[1] != " bob@example.com " {
 		t.Errorf("AdminEmails = %v", got)
+	}
+}
+
+func TestLoad_ProvidersApplyInSuppliedOrder(t *testing.T) {
+	setRequiredEnv(t)
+	t.Setenv("STICK_SERVER_LISTEN_ADDR", ":7070")
+	path := writeConfig(t, `
+server:
+  listen_addr: :9090
+`)
+
+	cfg, err := config.Load(
+		context.Background(),
+		config.YAMLProvider{Path: path},
+		config.EnvironmentProvider{},
+	)
+	if err != nil {
+		t.Fatalf("Load with YAML then environment: %v", err)
+	}
+	if cfg.Server.ListenAddr != ":7070" {
+		t.Errorf("ListenAddr = %q, want environment value", cfg.Server.ListenAddr)
+	}
+
+	cfg, err = config.Load(
+		context.Background(),
+		config.EnvironmentProvider{},
+		config.YAMLProvider{Path: path},
+	)
+	if err != nil {
+		t.Fatalf("Load with environment then YAML: %v", err)
+	}
+	if cfg.Server.ListenAddr != ":9090" {
+		t.Errorf("ListenAddr = %q, want YAML value", cfg.Server.ListenAddr)
+	}
+	if cfg.Database.DSN != "/tmp/test.db" {
+		t.Errorf("Database.DSN = %q, want value preserved from environment", cfg.Database.DSN)
 	}
 }
 
@@ -219,7 +256,7 @@ notifications:
     subject: "{{.StickName}} ready"
     body: "Hello {{.RecipientName}}"
 `)
-	cfg, err := config.Load(path)
+	cfg, err := config.Load(context.Background(), config.YAMLProvider{Path: path}, config.EnvironmentProvider{})
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
@@ -262,7 +299,7 @@ notifications:
   teams:
     url: https://teams.example.com/webhook
 `)
-	cfg, err := config.Load(path)
+	cfg, err := config.Load(context.Background(), config.YAMLProvider{Path: path}, config.EnvironmentProvider{})
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
@@ -289,7 +326,7 @@ auth:
   session_secret: yaml-session-secret-that-is-long-enough
 timezone: Not/ATimezone
 `)
-	if _, err := config.Load(path); err == nil || !strings.Contains(err.Error(), "timezone") {
+	if _, err := config.Load(context.Background(), config.YAMLProvider{Path: path}, config.EnvironmentProvider{}); err == nil || !strings.Contains(err.Error(), "timezone") {
 		t.Fatalf("Load error = %v", err)
 	}
 }
@@ -297,7 +334,7 @@ timezone: Not/ATimezone
 func TestLoad_RejectsShortSessionSecret(t *testing.T) {
 	setRequiredEnv(t)
 	t.Setenv("STICK_AUTH_SESSION_SECRET", "too-short")
-	if _, err := config.Load(""); err == nil || !strings.Contains(err.Error(), "SESSION_SECRET") {
+	if _, err := config.Load(context.Background(), config.YAMLProvider{}, config.EnvironmentProvider{}); err == nil || !strings.Contains(err.Error(), "auth.session_secret") {
 		t.Fatalf("Load error = %v", err)
 	}
 }
@@ -316,7 +353,7 @@ auth:
   session_secret: 0123456789abcdef0123456789abcdef
 unknown_setting: true
 `)
-	if _, err := config.Load(path); err == nil || !strings.Contains(err.Error(), "field unknown_setting not found") {
+	if _, err := config.Load(context.Background(), config.YAMLProvider{Path: path}, config.EnvironmentProvider{}); err == nil || !strings.Contains(err.Error(), "field unknown_setting not found") {
 		t.Fatalf("unknown YAML field error = %v", err)
 	}
 }
@@ -335,7 +372,7 @@ func TestLoad_RejectsInvalidURLs(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			setRequiredEnv(t)
 			t.Setenv(test.key, test.value)
-			if _, err := config.Load(""); err == nil {
+			if _, err := config.Load(context.Background(), config.YAMLProvider{}, config.EnvironmentProvider{}); err == nil {
 				t.Fatal("expected invalid URL to be rejected")
 			}
 		})
@@ -343,15 +380,19 @@ func TestLoad_RejectsInvalidURLs(t *testing.T) {
 }
 
 func TestLoad_ExplicitPathNotFound(t *testing.T) {
-	if _, err := config.Load("/nonexistent/path/config.yaml"); err == nil {
+	if _, err := config.Load(context.Background(), config.YAMLProvider{Path: "/nonexistent/path/config.yaml"}, config.EnvironmentProvider{}); err == nil {
 		t.Fatal("expected error for explicit missing config")
 	}
 }
 
 func TestLoad_MissingRequired(t *testing.T) {
 	clearConfigEnv(t)
-	if _, err := loadFromEnvWithoutRequired(t); err == nil || !strings.Contains(err.Error(), "missing required config") {
+	_, err := loadFromEnvWithoutRequired(t)
+	if err == nil || !strings.Contains(err.Error(), "missing required config") {
 		t.Fatalf("Load error = %v", err)
+	}
+	if strings.Contains(err.Error(), "STICK_") {
+		t.Fatalf("Load error exposes provider-specific names: %v", err)
 	}
 }
 
@@ -366,5 +407,5 @@ func loadFromEnvWithoutRequired(t *testing.T) (config.Config, error) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = os.Chdir(original) })
-	return config.Load("")
+	return config.Load(context.Background(), config.YAMLProvider{}, config.EnvironmentProvider{})
 }

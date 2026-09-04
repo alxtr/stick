@@ -145,7 +145,7 @@ auth:
 	if cfg.Database.DSN != "/tmp/from-env.db" {
 		t.Errorf("Database.DSN = %q", cfg.Database.DSN)
 	}
-	if got := cfg.Server.PublicURL.String(); got != "https://env.example.com/stick" {
+	if got := cfg.Server.PublicURL; got != "https://env.example.com/stick" {
 		t.Errorf("PublicURL = %q", got)
 	}
 	if got := cfg.Auth.AdminEmails; len(got) != 2 || got[0] != " Alice@Example.com" || got[1] != " bob@example.com " {

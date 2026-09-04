@@ -97,7 +97,7 @@ func TestAzureAppConfigurationProviderLoadsSettings(t *testing.T) {
 	if cfg.Database.DSN != "/tmp/azure.db" || cfg.Database.Driver != DatabaseDriverSQLite {
 		t.Fatalf("database = %+v", cfg.Database)
 	}
-	if cfg.Server.PublicURL.String() != "http://localhost:8080" {
+	if cfg.Server.PublicURL != "http://localhost:8080" {
 		t.Errorf("PublicURL = %q", cfg.Server.PublicURL)
 	}
 	if got := cfg.Auth.AdminEmails; len(got) != 2 || got[0] != "Alice@example.com" || got[1] != "bob@example.com" {

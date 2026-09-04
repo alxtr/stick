@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+
+	"golang.org/x/sync/errgroup"
 )
 
 // Component is a long-lived application component.
@@ -17,28 +19,34 @@ func Run(parent context.Context, components ...Component) error {
 	if len(components) == 0 {
 		return nil
 	}
-	runCtx, cancel := context.WithCancel(parent)
+	group, groupCtx := errgroup.WithContext(parent)
+	runCtx, cancel := context.WithCancel(groupCtx)
 	defer cancel()
+	stopShutdownLog := context.AfterFunc(parent, func() {
+		slog.InfoContext(parent, "shutdown requested")
+	})
+	defer stopShutdownLog()
 	results := make(chan error, len(components))
 	for _, component := range components {
-		go func(component Component) { results <- component.Run(runCtx) }(component)
+		component := component
+		group.Go(func() error {
+			err := component.Run(runCtx)
+			// errgroup only cancels its context for non-nil errors. A clean
+			// component stop must also stop the remaining components.
+			cancel()
+			results <- err
+			return err
+		})
 	}
 
+	// Preserve Run's contract of returning all component errors rather than
+	// errgroup's first error.
+	group.Wait()
+	close(results)
 	var errs []error
-	shutdownDone := parent.Done()
-	remaining := len(components)
-	for remaining > 0 {
-		select {
-		case <-shutdownDone:
-			shutdownDone = nil
-			slog.InfoContext(parent, "shutdown requested")
-			cancel()
-		case runErr := <-results:
-			if runErr != nil {
-				errs = append(errs, runErr)
-			}
-			cancel()
-			remaining--
+	for runErr := range results {
+		if runErr != nil {
+			errs = append(errs, runErr)
 		}
 	}
 	return errors.Join(errs...)

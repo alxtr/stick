@@ -29,6 +29,25 @@ func TestRunCancelsSiblingAndReturnsComponentError(t *testing.T) {
 	}
 }
 
+func TestRunCancelsSiblingWhenComponentStopsCleanly(t *testing.T) {
+	siblingStopped := make(chan struct{})
+	stopper := testComponent{run: func(context.Context) error { return nil }}
+	sibling := testComponent{run: func(ctx context.Context) error {
+		<-ctx.Done()
+		close(siblingStopped)
+		return nil
+	}}
+
+	if err := app.Run(context.Background(), stopper, sibling); err != nil {
+		t.Fatalf("Run error = %v, want nil", err)
+	}
+	select {
+	case <-siblingStopped:
+	case <-time.After(time.Second):
+		t.Fatal("sibling component was not canceled")
+	}
+}
+
 func TestRunWithNoComponentsReturnsImmediately(t *testing.T) {
 	if err := app.Run(context.Background()); err != nil {
 		t.Fatalf("Run error = %v, want nil", err)

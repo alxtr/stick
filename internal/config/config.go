@@ -1,12 +1,7 @@
 // Package config loads and validates application configuration.
 package config
 
-import (
-	"time"
-
-	"stick/internal/auth"
-	"stick/internal/publicurl"
-)
+import "time"
 
 // Database driver names identify the configured persistence backend.
 const (
@@ -17,7 +12,7 @@ const (
 
 // ServerConfig contains the HTTP server's deployment settings.
 type ServerConfig struct {
-	PublicURL  publicurl.URL
+	PublicURL  string
 	ListenAddr string
 }
 
@@ -30,9 +25,10 @@ type DatabaseConfig struct {
 
 // AuthConfig contains authentication and authorization settings.
 type AuthConfig struct {
-	OIDC          auth.OIDCConfig
-	SessionSecret []byte
-	AdminEmails   []string
+	IDPEndpoint string
+	Audience    string
+	Scope       string
+	AdminEmails []string
 }
 
 // SMTPConfig holds SMTP connection settings and optional email templates.

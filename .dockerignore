@@ -17,10 +17,9 @@ config.*
 *secret*
 *token*
 
-# Compose and local IDP configuration
+# Compose and local configuration
 docker-compose*.yaml
 docker-compose*.yml
-local-idp.*
 
 # Runtime databases and application data
 data/
@@ -36,9 +35,6 @@ bin/
 build/
 dist/
 coverage/
-node_modules/
-test-results/
-playwright-report/
 *.exe
 *.dll
 *.so

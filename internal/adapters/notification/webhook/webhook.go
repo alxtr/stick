@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"stick/internal/application"
 	"stick/internal/netutil"
+	"stick/internal/notification"
 )
 
 const defaultTimeout = 10 * time.Second
@@ -43,7 +43,7 @@ type Notifier struct {
 	client *http.Client
 }
 
-var _ application.Notifier = (*Notifier)(nil)
+var _ notification.Notifier = (*Notifier)(nil)
 
 // New creates a webhook notifier.
 func New(cfg Config) (*Notifier, error) {
@@ -61,7 +61,7 @@ func New(cfg Config) (*Notifier, error) {
 }
 
 // Notify sends one notification to the configured webhook.
-func (w *Notifier) Notify(ctx context.Context, notification application.Notification) error {
+func (w *Notifier) Notify(ctx context.Context, notification notification.Notification) error {
 	payload := Payload{
 		StickID:        notification.StickID,
 		StickName:      notification.StickName,

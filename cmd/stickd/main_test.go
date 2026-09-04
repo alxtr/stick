@@ -12,18 +12,17 @@ import (
 	"testing"
 	"time"
 
-	"stick/internal/application"
 	"stick/internal/config"
+	"stick/internal/notification"
 )
 
 func TestMainContextStopsOnCanceledParent(t *testing.T) {
 	t.Setenv("STICK_DATABASE", filepath.Join(t.TempDir(), "stick.db"))
-	t.Setenv("STICK_AUTH_OIDC_ISSUER", "https://accounts.google.com")
-	t.Setenv("STICK_AUTH_OIDC_CLIENT_ID", "client-id")
-	t.Setenv("STICK_AUTH_OIDC_CLIENT_SECRET", "client-secret")
+	t.Setenv("STICK_AUTH_IDP_ENDPOINT", "https://accounts.google.com")
+	t.Setenv("STICK_AUTH_AUDIENCE", "stick-api")
+	t.Setenv("STICK_AUTH_SCOPE", "stick:use")
 	t.Setenv("STICK_SERVER_PUBLIC_URL", "http://localhost:8080")
 	t.Setenv("STICK_SERVER_LISTEN_ADDR", "127.0.0.1:0")
-	t.Setenv("STICK_AUTH_SESSION_SECRET", "0123456789abcdef0123456789abcdef")
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
@@ -133,12 +132,11 @@ func TestBuildConfigProvidersRejectsUnknownProvider(t *testing.T) {
 func setMinimalRuntimeEnv(t *testing.T, databasePath string) {
 	t.Helper()
 	t.Setenv("STICK_DATABASE", databasePath)
-	t.Setenv("STICK_AUTH_OIDC_ISSUER", "https://accounts.google.com")
-	t.Setenv("STICK_AUTH_OIDC_CLIENT_ID", "client-id")
-	t.Setenv("STICK_AUTH_OIDC_CLIENT_SECRET", "client-secret")
+	t.Setenv("STICK_AUTH_IDP_ENDPOINT", "https://accounts.google.com")
+	t.Setenv("STICK_AUTH_AUDIENCE", "stick-api")
+	t.Setenv("STICK_AUTH_SCOPE", "stick:use")
 	t.Setenv("STICK_SERVER_PUBLIC_URL", "http://localhost:8080")
 	t.Setenv("STICK_SERVER_LISTEN_ADDR", "127.0.0.1:0")
-	t.Setenv("STICK_AUTH_SESSION_SECRET", "0123456789abcdef0123456789abcdef")
 }
 
 func TestBuildNotifierWithNoBackendsSucceeds(t *testing.T) {
@@ -169,7 +167,7 @@ func TestBuildNotifierComposesWebhook(t *testing.T) {
 	if err != nil {
 		t.Fatalf("buildNotifier: %v", err)
 	}
-	if err := notifier.Notify(context.Background(), application.Notification{StickID: "aa001"}); err != nil {
+	if err := notifier.Notify(context.Background(), notification.Notification{StickID: "aa001"}); err != nil {
 		t.Fatalf("Notify: %v", err)
 	}
 	if payload := <-received; !strings.Contains(payload, `"stick_id":"aa001"`) {
@@ -195,7 +193,7 @@ func TestBuildNotifierComposesTeams(t *testing.T) {
 	if err != nil {
 		t.Fatalf("buildNotifier: %v", err)
 	}
-	if err := notifier.Notify(context.Background(), application.Notification{StickName: "aa001"}); err != nil {
+	if err := notifier.Notify(context.Background(), notification.Notification{StickName: "aa001"}); err != nil {
 		t.Fatalf("Notify: %v", err)
 	}
 	if payload := <-received; !strings.Contains(payload, `"@type":"MessageCard"`) || !strings.Contains(payload, `"title":"aa001 is available"`) {
@@ -225,7 +223,7 @@ func TestBuildNotifierComposesMultipleBackends(t *testing.T) {
 	if err != nil {
 		t.Fatalf("buildNotifier: %v", err)
 	}
-	if err := notifier.Notify(context.Background(), application.Notification{}); err != nil {
+	if err := notifier.Notify(context.Background(), notification.Notification{}); err != nil {
 		t.Fatalf("Notify: %v", err)
 	}
 	select {
@@ -259,7 +257,7 @@ func TestBuildNotifierComposesMultipleInstancesOfOneBackend(t *testing.T) {
 	if err != nil {
 		t.Fatalf("buildNotifier: %v", err)
 	}
-	if err := notifier.Notify(context.Background(), application.Notification{}); err != nil {
+	if err := notifier.Notify(context.Background(), notification.Notification{}); err != nil {
 		t.Fatalf("Notify: %v", err)
 	}
 	for i := 0; i < 2; i++ {
@@ -307,7 +305,7 @@ func TestBuildNotifierAttributesRuntimeErrors(t *testing.T) {
 	if err != nil {
 		t.Fatalf("buildNotifier: %v", err)
 	}
-	err = notifier.Notify(context.Background(), application.Notification{})
+	err = notifier.Notify(context.Background(), notification.Notification{})
 	if err == nil || !strings.Contains(err.Error(), "webhook: webhook returned 502") {
 		t.Fatalf("runtime error = %v", err)
 	}

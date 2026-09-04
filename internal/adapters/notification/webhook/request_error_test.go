@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"stick/internal/application"
+	"stick/internal/notification"
 )
 
 type roundTripperFunc func(*http.Request) (*http.Response, error)
@@ -29,7 +29,7 @@ func TestRequestErrorRedactsWebhookURL(t *testing.T) {
 		return nil, fmt.Errorf("transport failed for %s", request.URL.String())
 	})}
 
-	err = notifier.Notify(context.Background(), application.Notification{})
+	err = notifier.Notify(context.Background(), notification.Notification{})
 	if err == nil {
 		t.Fatal("expected request error")
 	}

@@ -11,27 +11,12 @@ import (
 	"stick/internal/config"
 )
 
-const testSecret = "0123456789abcdef0123456789abcdef"
-
 var configEnvKeys = []string{
-	"STICK_DATABASE",
-	"STICK_SERVER_PUBLIC_URL",
-	"STICK_SERVER_LISTEN_ADDR",
-	"STICK_TIMEZONE",
-	"STICK_AUTH_OIDC_ISSUER",
-	"STICK_AUTH_OIDC_CLIENT_ID",
-	"STICK_AUTH_OIDC_CLIENT_SECRET",
-	"STICK_AUTH_SESSION_SECRET",
-	"STICK_AUTH_ADMIN_EMAILS",
-	"STICK_NOTIFICATIONS_SMTP_HOST",
-	"STICK_NOTIFICATIONS_SMTP_PORT",
-	"STICK_NOTIFICATIONS_SMTP_TLS_MODE",
-	"STICK_NOTIFICATIONS_SMTP_USERNAME",
-	"STICK_NOTIFICATIONS_SMTP_PASSWORD",
-	"STICK_NOTIFICATIONS_SMTP_FROM",
-	"STICK_NOTIFICATIONS_SMTP_SUBJECT",
-	"STICK_NOTIFICATIONS_SMTP_BODY",
-	"STICK_NOTIFICATIONS_WEBHOOK_URL",
+	"STICK_DATABASE", "STICK_SERVER_PUBLIC_URL", "STICK_SERVER_LISTEN_ADDR", "STICK_TIMEZONE",
+	"STICK_AUTH_IDP_ENDPOINT", "STICK_AUTH_AUDIENCE", "STICK_AUTH_SCOPE", "STICK_AUTH_ADMIN_EMAILS",
+	"STICK_NOTIFICATIONS_SMTP_HOST", "STICK_NOTIFICATIONS_SMTP_PORT", "STICK_NOTIFICATIONS_SMTP_TLS_MODE",
+	"STICK_NOTIFICATIONS_SMTP_USERNAME", "STICK_NOTIFICATIONS_SMTP_PASSWORD", "STICK_NOTIFICATIONS_SMTP_FROM",
+	"STICK_NOTIFICATIONS_SMTP_SUBJECT", "STICK_NOTIFICATIONS_SMTP_BODY", "STICK_NOTIFICATIONS_WEBHOOK_URL",
 	"STICK_NOTIFICATIONS_TEAMS_URL",
 }
 
@@ -40,10 +25,9 @@ func setRequiredEnv(t *testing.T) {
 	clearConfigEnv(t)
 	t.Setenv("STICK_DATABASE", "/tmp/test.db")
 	t.Setenv("STICK_SERVER_PUBLIC_URL", "http://localhost:8080")
-	t.Setenv("STICK_AUTH_OIDC_ISSUER", "https://accounts.google.com")
-	t.Setenv("STICK_AUTH_OIDC_CLIENT_ID", "client-id")
-	t.Setenv("STICK_AUTH_OIDC_CLIENT_SECRET", "client-secret")
-	t.Setenv("STICK_AUTH_SESSION_SECRET", testSecret)
+	t.Setenv("STICK_AUTH_IDP_ENDPOINT", "https://accounts.google.com")
+	t.Setenv("STICK_AUTH_AUDIENCE", "stick-api")
+	t.Setenv("STICK_AUTH_SCOPE", "stick:use")
 }
 
 func clearConfigEnv(t *testing.T) {
@@ -80,84 +64,58 @@ func writeConfig(t *testing.T, content string) string {
 	return path
 }
 
-func TestLoad_FromEnvironment(t *testing.T) {
+func TestLoadFromEnvironment(t *testing.T) {
 	setRequiredEnv(t)
 	cfg := loadFromEnv(t)
-
 	if cfg.Database.Driver != config.DatabaseDriverSQLite || cfg.Database.DSN != "/tmp/test.db" {
 		t.Fatalf("database = %+v", cfg.Database)
 	}
-	if cfg.Server.ListenAddr != ":8080" {
-		t.Errorf("ListenAddr = %q, want :8080", cfg.Server.ListenAddr)
+	if cfg.Auth.IDPEndpoint != "https://accounts.google.com" || cfg.Auth.Audience != "stick-api" || cfg.Auth.Scope != "stick:use" {
+		t.Fatalf("auth = %+v", cfg.Auth)
 	}
-	if cfg.Server.PublicURL.String() != "http://localhost:8080" {
-		t.Errorf("PublicURL = %q", cfg.Server.PublicURL.String())
-	}
-	if cfg.Timezone != time.UTC {
-		t.Errorf("Timezone = %v, want UTC", cfg.Timezone)
-	}
-	if len(cfg.Auth.AdminEmails) != 0 {
-		t.Errorf("AdminEmails = %v, want empty", cfg.Auth.AdminEmails)
+	if cfg.Server.ListenAddr != ":8080" || cfg.Timezone != time.UTC {
+		t.Fatalf("server/timezone = %+v, %v", cfg.Server, cfg.Timezone)
 	}
 }
 
-func TestLoad_InfersPostgresFromURL(t *testing.T) {
+func TestLoadDefaultsPublicURL(t *testing.T) {
 	setRequiredEnv(t)
-	t.Setenv("STICK_DATABASE", "postgres://user:secret@database.example/stick")
+	t.Setenv("STICK_SERVER_PUBLIC_URL", "")
 	cfg := loadFromEnv(t)
-
-	if cfg.Database.Driver != config.DatabaseDriverPostgres || cfg.Database.DSN != "postgres://user:secret@database.example/stick" {
-		t.Fatalf("database = %+v", cfg.Database)
+	if got := cfg.Server.PublicURL; got != "http://localhost" {
+		t.Fatalf("PublicURL = %q, want http://localhost", got)
 	}
 }
 
-func TestLoad_InfersMongoDBFromURL(t *testing.T) {
-	for _, dsn := range []string{
-		"mongodb://user:secret@database.example/stick",
-		"mongodb+srv://user:secret@cluster.example/stick",
-	} {
-		t.Run(dsn[:strings.IndexByte(dsn, ':')], func(t *testing.T) {
-			setRequiredEnv(t)
-			t.Setenv("STICK_DATABASE", dsn)
-			cfg := loadFromEnv(t)
-			if cfg.Database.Driver != config.DatabaseDriverMongoDB || cfg.Database.DSN != dsn {
-				t.Fatalf("database = %+v", cfg.Database)
-			}
-		})
-	}
-}
-
-func TestLoad_FromYAML(t *testing.T) {
+func TestLoadFromYAMLAndEnvironmentOverride(t *testing.T) {
 	clearConfigEnv(t)
 	path := writeConfig(t, `
-database: /tmp/yaml.db
+database: /tmp/from-yaml.db
 server:
   public_url: https://yaml.example.com/ops/stick/
   listen_addr: :9090
 auth:
-  oidc:
-    issuer: https://yaml.example.com
-    client_id: yaml-client
-    client_secret: yaml-secret
-  session_secret: yaml-session-secret-that-is-long-enough
+  idp_endpoint: https://yaml.example.com
+  audience: yaml-api
+  scope: stick:read
   admin_emails:
     - Alice@example.com
-    - bob@example.com
 timezone: America/New_York
 `)
-
+	t.Setenv("STICK_AUTH_AUDIENCE", "env-api")
+	t.Setenv("STICK_SERVER_PUBLIC_URL", "https://env.example.com/stick/")
 	cfg, err := config.Load(context.Background(), config.YAMLProvider{Path: path}, config.EnvironmentProvider{})
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	if cfg.Database.DSN != "/tmp/yaml.db" || cfg.Server.ListenAddr != ":9090" {
+	if cfg.Database.DSN != "/tmp/from-yaml.db" || cfg.Server.ListenAddr != ":9090" {
 		t.Fatalf("config = %+v", cfg)
 	}
-	if got := cfg.Server.PublicURL.String(); got != "https://yaml.example.com/ops/stick" {
-		t.Errorf("PublicURL = %q", got)
+	if cfg.Auth.Audience != "env-api" || cfg.Auth.IDPEndpoint != "https://yaml.example.com" || cfg.Auth.Scope != "stick:read" {
+		t.Fatalf("auth = %+v", cfg.Auth)
 	}
-	if got := cfg.Auth.AdminEmails; len(got) != 2 || got[0] != "Alice@example.com" || got[1] != "bob@example.com" {
-		t.Errorf("AdminEmails = %v", got)
+	if got := cfg.Server.PublicURL; got != "https://env.example.com/stick" {
+		t.Errorf("PublicURL = %q", got)
 	}
 	want, _ := time.LoadLocation("America/New_York")
 	if cfg.Timezone.String() != want.String() {
@@ -165,18 +123,16 @@ timezone: America/New_York
 	}
 }
 
-func TestLoad_EnvironmentOverridesYAML(t *testing.T) {
+func TestLoadEnvironmentOverridesYAML(t *testing.T) {
 	clearConfigEnv(t)
 	path := writeConfig(t, `
 database: /tmp/from-yaml.db
 server:
-  public_url: http://yaml.example.com
+  public_url: http://localhost:8080
 auth:
-  oidc:
-    issuer: https://yaml.example.com
-    client_id: yaml-client
-    client_secret: yaml-secret
-  session_secret: yaml-session-secret-that-is-long-enough
+  idp_endpoint: https://yaml.example.com
+  audience: yaml-api
+  scope: stick:read
 `)
 	t.Setenv("STICK_DATABASE", "/tmp/from-env.db")
 	t.Setenv("STICK_SERVER_PUBLIC_URL", "https://env.example.com/stick/")
@@ -189,7 +145,7 @@ auth:
 	if cfg.Database.DSN != "/tmp/from-env.db" {
 		t.Errorf("Database.DSN = %q", cfg.Database.DSN)
 	}
-	if got := cfg.Server.PublicURL.String(); got != "https://env.example.com/stick" {
+	if got := cfg.Server.PublicURL; got != "https://env.example.com/stick" {
 		t.Errorf("PublicURL = %q", got)
 	}
 	if got := cfg.Auth.AdminEmails; len(got) != 2 || got[0] != " Alice@Example.com" || got[1] != " bob@example.com " {
@@ -197,7 +153,7 @@ auth:
 	}
 }
 
-func TestLoad_ProvidersApplyInSuppliedOrder(t *testing.T) {
+func TestLoadProvidersApplyInSuppliedOrder(t *testing.T) {
 	setRequiredEnv(t)
 	t.Setenv("STICK_SERVER_LISTEN_ADDR", ":7070")
 	path := writeConfig(t, `
@@ -233,18 +189,36 @@ server:
 	}
 }
 
-func TestLoad_NotificationConfig(t *testing.T) {
+func TestLoadInfersDatabaseDrivers(t *testing.T) {
+	setRequiredEnv(t)
+	for _, test := range []struct {
+		dsn    string
+		driver string
+	}{
+		{dsn: "postgres://user:secret@database.example/stick", driver: config.DatabaseDriverPostgres},
+		{dsn: "mongodb://user:secret@database.example/stick", driver: config.DatabaseDriverMongoDB},
+		{dsn: "mongodb+srv://user:secret@cluster.example/stick", driver: config.DatabaseDriverMongoDB},
+	} {
+		t.Run(test.driver, func(t *testing.T) {
+			t.Setenv("STICK_DATABASE", test.dsn)
+			cfg := loadFromEnv(t)
+			if cfg.Database.Driver != test.driver || cfg.Database.DSN != test.dsn {
+				t.Fatalf("database = %+v", cfg.Database)
+			}
+		})
+	}
+}
+
+func TestLoadNotificationConfig(t *testing.T) {
 	clearConfigEnv(t)
 	path := writeConfig(t, `
 database: /tmp/test.db
 server:
   public_url: http://localhost:8080
 auth:
-  oidc:
-    issuer: https://example.com
-    client_id: c
-    client_secret: s
-  session_secret: yaml-session-secret-that-is-long-enough
+  idp_endpoint: https://example.com
+  audience: api
+  scope: stick:use
 notifications:
   smtp:
     host: smtp.example.com
@@ -268,7 +242,7 @@ notifications:
 	}
 }
 
-func TestLoad_TeamsNotificationConfig(t *testing.T) {
+func TestLoadTeamsNotificationConfig(t *testing.T) {
 	setRequiredEnv(t)
 	t.Setenv("STICK_NOTIFICATIONS_TEAMS_URL", " https://teams.example.com/webhook ")
 	cfg := loadFromEnv(t)
@@ -277,18 +251,16 @@ func TestLoad_TeamsNotificationConfig(t *testing.T) {
 	}
 }
 
-func TestLoad_AllowsMultipleNotificationBackends(t *testing.T) {
+func TestLoadAllowsMultipleNotificationBackends(t *testing.T) {
 	clearConfigEnv(t)
 	path := writeConfig(t, `
 database: /tmp/test.db
 server:
   public_url: http://localhost:8080
 auth:
-  oidc:
-    issuer: https://example.com
-    client_id: c
-    client_secret: s
-  session_secret: yaml-session-secret-that-is-long-enough
+  idp_endpoint: https://example.com
+  audience: api
+  scope: stick:use
 notifications:
   smtp:
     - host: smtp.example.com
@@ -312,18 +284,16 @@ notifications:
 	}
 }
 
-func TestLoad_TimezoneInvalid(t *testing.T) {
+func TestLoadTimezoneInvalid(t *testing.T) {
 	clearConfigEnv(t)
 	path := writeConfig(t, `
 database: /tmp/test.db
 server:
   public_url: http://localhost:8080
 auth:
-  oidc:
-    issuer: https://example.com
-    client_id: c
-    client_secret: s
-  session_secret: yaml-session-secret-that-is-long-enough
+  idp_endpoint: https://example.com
+  audience: api
+  scope: stick:use
 timezone: Not/ATimezone
 `)
 	if _, err := config.Load(context.Background(), config.YAMLProvider{Path: path}, config.EnvironmentProvider{}); err == nil || !strings.Contains(err.Error(), "timezone") {
@@ -331,26 +301,16 @@ timezone: Not/ATimezone
 	}
 }
 
-func TestLoad_RejectsShortSessionSecret(t *testing.T) {
-	setRequiredEnv(t)
-	t.Setenv("STICK_AUTH_SESSION_SECRET", "too-short")
-	if _, err := config.Load(context.Background(), config.YAMLProvider{}, config.EnvironmentProvider{}); err == nil || !strings.Contains(err.Error(), "auth.session_secret") {
-		t.Fatalf("Load error = %v", err)
-	}
-}
-
-func TestLoad_RejectsUnknownYAMLFields(t *testing.T) {
+func TestLoadRejectsUnknownYAMLFields(t *testing.T) {
 	clearConfigEnv(t)
 	path := writeConfig(t, `
 database: /tmp/test.db
 server:
   public_url: https://stick.example.com
 auth:
-  oidc:
-    issuer: https://issuer.example.com
-    client_id: client
-    client_secret: secret
-  session_secret: 0123456789abcdef0123456789abcdef
+  idp_endpoint: https://issuer.example.com
+  audience: api
+  scope: stick:use
 unknown_setting: true
 `)
 	if _, err := config.Load(context.Background(), config.YAMLProvider{Path: path}, config.EnvironmentProvider{}); err == nil || !strings.Contains(err.Error(), "field unknown_setting not found") {
@@ -358,7 +318,7 @@ unknown_setting: true
 	}
 }
 
-func TestLoad_RejectsInvalidURLs(t *testing.T) {
+func TestLoadRejectsInvalidURLs(t *testing.T) {
 	for _, test := range []struct {
 		name  string
 		key   string
@@ -366,8 +326,8 @@ func TestLoad_RejectsInvalidURLs(t *testing.T) {
 	}{
 		{name: "public URL scheme", key: "STICK_SERVER_PUBLIC_URL", value: "ftp://example.com"},
 		{name: "public URL transport", key: "STICK_SERVER_PUBLIC_URL", value: "http://example.com"},
-		{name: "OIDC issuer scheme", key: "STICK_AUTH_OIDC_ISSUER", value: "file:///issuer"},
-		{name: "OIDC issuer transport", key: "STICK_AUTH_OIDC_ISSUER", value: "http://issuer.example.com"},
+		{name: "IDP endpoint scheme", key: "STICK_AUTH_IDP_ENDPOINT", value: "file:///issuer"},
+		{name: "IDP endpoint transport", key: "STICK_AUTH_IDP_ENDPOINT", value: "http://issuer.example.com"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			setRequiredEnv(t)
@@ -379,13 +339,13 @@ func TestLoad_RejectsInvalidURLs(t *testing.T) {
 	}
 }
 
-func TestLoad_ExplicitPathNotFound(t *testing.T) {
+func TestLoadExplicitPathNotFound(t *testing.T) {
 	if _, err := config.Load(context.Background(), config.YAMLProvider{Path: "/nonexistent/path/config.yaml"}, config.EnvironmentProvider{}); err == nil {
 		t.Fatal("expected error for explicit missing config")
 	}
 }
 
-func TestLoad_MissingRequired(t *testing.T) {
+func TestLoadMissingRequired(t *testing.T) {
 	clearConfigEnv(t)
 	_, err := loadFromEnvWithoutRequired(t)
 	if err == nil || !strings.Contains(err.Error(), "missing required config") {

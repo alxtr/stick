@@ -9,8 +9,7 @@ import (
 	"time"
 	"uuid"
 
-	"stick/internal/application"
-	"stick/internal/format"
+	"stick/internal/notification"
 )
 
 const (
@@ -39,14 +38,14 @@ type WorkerOptions struct {
 // Worker claims and delivers persisted notification records.
 type Worker struct {
 	store    Store
-	notifier application.Notifier
+	notifier notification.Notifier
 	options  WorkerOptions
 }
 
 // NewWorker returns a notification worker with normalized options.
-func NewWorker(store Store, notifier application.Notifier, options WorkerOptions) *Worker {
+func NewWorker(store Store, notifier notification.Notifier, options WorkerOptions) *Worker {
 	if notifier == nil {
-		notifier = application.Noop()
+		notifier = notification.Noop()
 	}
 	if options.Location == nil {
 		options.Location = time.UTC
@@ -138,19 +137,28 @@ func (w *Worker) processOne(ctx context.Context) (bool, error) {
 	return true, fmt.Errorf("deliver notification %d attempt %d: %w", delivery.ID, delivery.Attempts, err)
 }
 
-func (w *Worker) notification(delivery Delivery) application.Notification {
+func (w *Worker) notification(delivery Delivery) notification.Notification {
 	duration := delivery.ReleasedAt.Sub(delivery.HeldSince).Round(time.Minute)
-	return application.Notification{
+	return notification.Notification{
 		StickID:        delivery.StickID,
 		StickName:      delivery.StickName,
 		HolderName:     delivery.HolderName,
 		HolderEmail:    delivery.HolderEmail,
-		Duration:       format.Duration(duration),
+		Duration:       formatDuration(duration),
 		ReleasedAt:     delivery.ReleasedAt.In(w.options.Location).Format("Jan 2 · 15:04"),
 		BaseURL:        w.options.BaseURL,
 		RecipientName:  delivery.RecipientName,
 		RecipientEmail: delivery.RecipientEmail,
 	}
+}
+
+func formatDuration(value time.Duration) string {
+	hours := int(value.Hours())
+	minutes := int(value.Minutes()) % 60
+	if hours > 0 {
+		return fmt.Sprintf("%dh %02dmin", hours, minutes)
+	}
+	return fmt.Sprintf("%d min", minutes)
 }
 
 func (w *Worker) backoff(attempt int) time.Duration {

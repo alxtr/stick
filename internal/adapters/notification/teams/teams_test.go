@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"stick/internal/adapters/notification/teams"
-	notify "stick/internal/application"
+	notify "stick/internal/notification"
 )
 
 func TestTeamsNotifierPostsMessageCard(t *testing.T) {
@@ -68,7 +68,7 @@ func TestTeamsNotifierPostsMessageCard(t *testing.T) {
 	}
 	actions := received["potentialAction"].([]any)
 	target := actions[0].(map[string]any)["targets"].([]any)[0].(map[string]any)
-	if target["uri"] != "https://stick.example.com/stick/sticks/prod%2Fdeploy" {
+	if target["uri"] != "https://stick.example.com/stick/api/v1/sticks/prod%2Fdeploy" {
 		t.Errorf("claim URI = %v", target["uri"])
 	}
 }

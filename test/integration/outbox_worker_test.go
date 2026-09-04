@@ -18,13 +18,14 @@ import (
 	"stick/internal/adapters/persistence/sqlite"
 	"stick/internal/application"
 	core "stick/internal/core"
+	"stick/internal/notification"
 	"stick/internal/outbox"
 )
 
 func TestWorkerSuccessfulDeliveryRecordsOutcomeAndCleansSubscription(t *testing.T) {
 	store, conn := preparedDelivery(t)
-	delivered := make(chan application.Notification, 1)
-	worker := testWorker(store, application.NotifierFunc(func(_ context.Context, notification application.Notification) error {
+	delivered := make(chan notification.Notification, 1)
+	worker := testWorker(store, notification.NotifierFunc(func(_ context.Context, notification notification.Notification) error {
 		delivered <- notification
 		return nil
 	}))
@@ -105,7 +106,7 @@ func TestWorkerDeliversTeamsNotificationAndRecordsOutcome(t *testing.T) {
 func TestWorkerDeliversToMultipleInstancesOfOneBackend(t *testing.T) {
 	store, conn := preparedDelivery(t)
 	received := make(chan string, 2)
-	newWebhook := func(name string) application.Notifier {
+	newWebhook := func(name string) notification.Notifier {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			received <- name
 			w.WriteHeader(http.StatusNoContent)
@@ -118,7 +119,7 @@ func TestWorkerDeliversToMultipleInstancesOfOneBackend(t *testing.T) {
 		return notifier
 	}
 
-	worker := testWorker(store, application.Multi(
+	worker := testWorker(store, notification.Multi(
 		newWebhook("first webhook"),
 		newWebhook("second webhook"),
 	))
@@ -143,7 +144,7 @@ func TestWorkerDeliversToMultipleInstancesOfOneBackend(t *testing.T) {
 func TestWorkerRetriesFailureThenSucceeds(t *testing.T) {
 	store, conn := preparedDelivery(t)
 	var calls atomic.Int32
-	worker := testWorker(store, application.NotifierFunc(func(context.Context, application.Notification) error {
+	worker := testWorker(store, notification.NotifierFunc(func(context.Context, notification.Notification) error {
 		if calls.Add(1) == 1 {
 			return errors.New("temporary SMTP failure")
 		}
@@ -180,7 +181,7 @@ func TestWorkerRecoversStaleClaimAfterRestart(t *testing.T) {
 	}
 
 	var calls atomic.Int32
-	worker := testWorker(store, application.NotifierFunc(func(context.Context, application.Notification) error {
+	worker := testWorker(store, notification.NotifierFunc(func(context.Context, notification.Notification) error {
 		calls.Add(1)
 		return nil
 	}))
@@ -195,7 +196,7 @@ func TestWorkerRecoversStaleClaimAfterRestart(t *testing.T) {
 func TestWorkerRunCancellationStopsCooperativeInFlightNotifier(t *testing.T) {
 	store, conn := preparedDelivery(t)
 	started := make(chan struct{})
-	worker := testWorker(store, application.NotifierFunc(func(ctx context.Context, _ application.Notification) error {
+	worker := testWorker(store, notification.NotifierFunc(func(ctx context.Context, _ notification.Notification) error {
 		close(started)
 		<-ctx.Done()
 		return ctx.Err()
@@ -217,7 +218,7 @@ func TestWorkerRunCancellationStopsCooperativeInFlightNotifier(t *testing.T) {
 func TestWorkerBoundsEachDeliveryAttempt(t *testing.T) {
 	store, conn := preparedDelivery(t)
 	timedOut := make(chan struct{})
-	worker := outbox.NewWorker(store, application.NotifierFunc(func(ctx context.Context, _ application.Notification) error {
+	worker := outbox.NewWorker(store, notification.NotifierFunc(func(ctx context.Context, _ notification.Notification) error {
 		<-ctx.Done()
 		close(timedOut)
 		return ctx.Err()
@@ -266,7 +267,7 @@ func TestWorkerDoesNotDeleteNewerResubscription(t *testing.T) {
 		t.Fatal("resubscription reused the captured generation token")
 	}
 
-	worker := testWorker(store, application.Noop())
+	worker := testWorker(store, notification.Noop())
 	cancel, done := startWorker(worker)
 	t.Cleanup(func() { stopWorker(t, cancel, done) })
 	waitForOutbox(t, conn, "succeeded", 1)
@@ -288,7 +289,7 @@ func TestWorkerDoesNotDeleteNewerResubscription(t *testing.T) {
 func TestWorkerUsesInjectedClockForDeliveryOutcome(t *testing.T) {
 	store, conn := preparedDelivery(t)
 	fixed := time.Date(2040, time.January, 2, 3, 4, 5, 0, time.UTC)
-	worker := outbox.NewWorker(store, application.Noop(), outbox.WorkerOptions{
+	worker := outbox.NewWorker(store, notification.Noop(), outbox.WorkerOptions{
 		PollInterval:   time.Millisecond,
 		AttemptTimeout: 100 * time.Millisecond,
 		InitialBackoff: time.Millisecond,
@@ -375,7 +376,7 @@ func releaseStick(t *testing.T, store *sqlite.Store, id string, identity core.Id
 	}
 }
 
-func testWorker(store *sqlite.Store, notifier application.Notifier) *outbox.Worker {
+func testWorker(store *sqlite.Store, notifier notification.Notifier) *outbox.Worker {
 	return outbox.NewWorker(store, notifier, outbox.WorkerOptions{
 		BaseURL:        "https://example.com/stick",
 		Location:       time.UTC,

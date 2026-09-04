@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"stick/internal/adapters/notification/smtp"
-	notify "stick/internal/application"
+	notify "stick/internal/notification"
 )
 
 func TestNewSMTPNotifier_ValidatesConfig(t *testing.T) {
